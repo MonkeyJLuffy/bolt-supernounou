@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserRole } from '../../types/auth';
 import { useAuthStore } from '../../store/authStore';
 import { Heart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthFormProps {
   type: 'signin' | 'signup';
@@ -13,8 +14,9 @@ export function AuthForm({ type }: AuthFormProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<UserRole>('parent');
+  const navigate = useNavigate();
 
-  const { signIn, signUp, loading, error } = useAuthStore();
+  const { signIn, signUp, loading, error, simulateUser } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +25,11 @@ export function AuthForm({ type }: AuthFormProps) {
     } else {
       await signUp(email, password, role, firstName, lastName);
     }
+  };
+
+  const handleSimulateLogin = async (role: UserRole) => {
+    simulateUser(role);
+    navigate('/tableau-de-bord');
   };
 
   return (
@@ -118,15 +125,43 @@ export function AuthForm({ type }: AuthFormProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-pink-500 text-white py-2 px-4 rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50"
+            className="w-full bg-pink-500 text-white py-2 rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading
-              ? 'Chargement...'
-              : type === 'signin'
-              ? 'Se connecter'
-              : "S'inscrire"}
+            {loading ? 'Chargement...' : type === 'signin' ? 'Se connecter' : 'S\'inscrire'}
           </button>
         </form>
+
+        {type === 'signin' && (
+          <div className="mt-6 space-y-2">
+            <p className="text-sm text-gray-600 text-center mb-2">Simuler une connexion :</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleSimulateLogin('parent')}
+                className="text-sm text-gray-600 hover:text-gray-900 underline"
+              >
+                Parent (Marie Dupont)
+              </button>
+              <button
+                onClick={() => handleSimulateLogin('nounou')}
+                className="text-sm text-gray-600 hover:text-gray-900 underline"
+              >
+                Nounou (Sophie Martin)
+              </button>
+              <button
+                onClick={() => handleSimulateLogin('gestionnaire')}
+                className="text-sm text-gray-600 hover:text-gray-900 underline"
+              >
+                Gestionnaire (Lucas Bernard)
+              </button>
+              <button
+                onClick={() => handleSimulateLogin('admin')}
+                className="text-sm text-gray-600 hover:text-gray-900 underline"
+              >
+                Admin (Admin System)
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
