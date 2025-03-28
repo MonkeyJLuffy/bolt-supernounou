@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthForm } from './components/auth/AuthForm';
+import { CreateAccountForm } from './components/auth/CreateAccountForm';
 import { ParentDashboard } from './components/dashboard/ParentDashboard';
 import { NounouDashboard } from './components/dashboard/NounouDashboard';
 import { GestionnaireDashboard } from './components/dashboard/GestionnaireDashboard';
@@ -23,7 +24,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/signin" />} />
         <Route path="/signin" element={<AuthForm type="signin" />} />
-        <Route path="/signup" element={<AuthForm type="signup" />} />
+        <Route path="/signup" element={<CreateAccountForm />} />
         <Route
           path="/tableau-de-bord"
           element={
