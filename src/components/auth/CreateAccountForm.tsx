@@ -2,36 +2,49 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { UserRole } from '../../types/auth';
-import { Heart } from 'lucide-react';
+import { Heart, X, Upload } from 'lucide-react';
+
+interface ChildFormData {
+  firstName: string;
+  lastName: string;
+  photo: File | null;
+  photoPreview: string | null;
+}
+
+interface ParentFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  hasSecondParent: boolean;
+  secondParentFirstName?: string;
+  secondParentLastName?: string;
+  secondParentEmail?: string;
+  secondParentPhone?: string;
+  children: {
+    firstName: string;
+    lastName: string;
+    photo: File | null;
+    photoPreview: string | null;
+  }[];
+  address: string;
+}
+
+interface NounouFormData {
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  birthPlace: string;
+  address: string;
+  phone: string;
+  email: string;
+  photo: File | null;
+  photoPreview: string | null;
+}
 
 export function CreateAccountForm() {
-  const [role, setRole] = useState<'parent' | 'nounou'>('parent');
-  const navigate = useNavigate();
-  const { signUp, loading, error } = useAuthStore();
-
-  // État du formulaire parent
-  const [parentForm, setParentForm] = useState({
-    parent1: {
-      firstName: '',
-      lastName: '',
-    },
-    parent2: {
-      firstName: '',
-      lastName: '',
-    },
-    child: {
-      firstName: '',
-      lastName: '',
-    },
-    address: '',
-    primaryPhone: '',
-    secondaryPhone: '',
-    email: '',
-    password: '',
-  });
-
-  // État du formulaire nounou
-  const [nounouForm, setNounouForm] = useState({
+  const [userType, setUserType] = useState<'parent' | 'nounou'>('parent');
+  const [nounouData, setNounouData] = useState<NounouFormData>({
     firstName: '',
     lastName: '',
     birthDate: '',
@@ -39,444 +52,661 @@ export function CreateAccountForm() {
     address: '',
     phone: '',
     email: '',
-    password: '',
+    photo: null,
+    photoPreview: null,
   });
+  const [parentData, setParentData] = useState<ParentFormData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    hasSecondParent: false,
+    secondParentFirstName: '',
+    secondParentLastName: '',
+    secondParentEmail: '',
+    secondParentPhone: '',
+    children: [{
+      firstName: '',
+      lastName: '',
+      photo: null,
+      photoPreview: null,
+    }],
+    address: '',
+  });
+  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
+  const { signUp, loading, error } = useAuthStore();
 
-  const handleParentSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signUp(
-      parentForm.email,
-      parentForm.password,
-      'parent',
-      parentForm.parent1.firstName,
-      parentForm.parent1.lastName
-    );
+    try {
+      if (userType === 'parent') {
+        await signUp(
+          parentData.email,
+          password,
+          'parent',
+          parentData.firstName,
+          parentData.lastName
+        );
+      } else {
+        await signUp(
+          nounouData.email,
+          password,
+          'nounou',
+          nounouData.firstName,
+          nounouData.lastName
+        );
+      }
+      navigate('/tableau-de-bord');
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+    }
   };
 
-  const handleNounouSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await signUp(
-      nounouForm.email,
-      nounouForm.password,
-      'nounou',
-      nounouForm.firstName,
-      nounouForm.lastName
-    );
+  const handleNounouPhotoChange = (file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setNounouData({
+        ...nounouData,
+        photo: file,
+        photoPreview: reader.result as string,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleChildPhotoChange = (index: number, file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const updatedChildren = [...parentData.children];
+      updatedChildren[index] = {
+        ...updatedChildren[index],
+        photo: file,
+        photoPreview: reader.result as string,
+      };
+      setParentData({
+        ...parentData,
+        children: updatedChildren,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addChild = () => {
+    setParentData({
+      ...parentData,
+      children: [
+        ...parentData.children,
+        {
+          firstName: '',
+          lastName: '',
+          photo: null,
+          photoPreview: null,
+        },
+      ],
+    });
+  };
+
+  const removeChild = (index: number) => {
+    const updatedChildren = parentData.children.filter((_, i) => i !== index);
+    setParentData({
+      ...parentData,
+      children: updatedChildren,
+    });
+  };
+
+  const updateChild = (index: number, field: 'firstName' | 'lastName', value: string) => {
+    const updatedChildren = [...parentData.children];
+    updatedChildren[index] = {
+      ...updatedChildren[index],
+      [field]: value,
+    };
+    setParentData({
+      ...parentData,
+      children: updatedChildren,
+    });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-2xl">
-        <div className="flex items-center justify-center mb-8">
-          <Heart className="text-pink-500 w-8 h-8" />
-          <h1 className="text-3xl font-bold text-gray-800 ml-2">Super Nounou</h1>
-        </div>
-
-        <h2 className="text-2xl font-semibold text-gray-700 mb-6">
-          Demande de création de compte
-        </h2>
-        <p className="text-gray-600 mb-6">
-          Veuillez remplir le formulaire correspondant à votre profil
-        </p>
-
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
-            {error}
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#7ECBC3] mr-4 sm:mr-12">Super Nounou</h1>
+            </div>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* Sélection du rôle */}
-        <div className="flex mb-8 bg-gray-50 rounded-lg">
-          <button
-            className={`flex-1 py-3 px-4 rounded-lg ${
-              role === 'parent'
-                ? 'bg-white shadow-md text-gray-800'
-                : 'text-gray-600'
-            }`}
-            onClick={() => setRole('parent')}
-          >
-            Parent
-          </button>
-          <button
-            className={`flex-1 py-3 px-4 rounded-lg ${
-              role === 'nounou'
-                ? 'bg-white shadow-md text-gray-800'
-                : 'text-gray-600'
-            }`}
-            onClick={() => setRole('nounou')}
-          >
-            Nounou
-          </button>
+      {/* Main Container */}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-[calc(100vh-64px)]">
+        {/* Left Column - Logo and Info */}
+        <div className="w-full lg:w-1/2 bg-[#B5E5E0] flex flex-col items-center justify-center p-6 sm:p-12">
+          <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full flex items-center justify-center mb-4 sm:mb-8">
+            <Heart className="w-12 h-12 sm:w-16 sm:h-16 text-[#7ECBC3]" />
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-bold text-white mb-3 sm:mb-6 text-center">Bienvenue sur Super Nounou</h2>
+          <p className="text-white text-base sm:text-xl text-center max-w-md">
+            La plateforme qui simplifie la gestion de garde d'enfants entre parents et nounous.
+          </p>
         </div>
 
-        {role === 'parent' ? (
-          <form onSubmit={handleParentSubmit} className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Parent 1</h3>
-              <div className="grid grid-cols-2 gap-4">
+        {/* Right Column - Form */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-12">
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-4xl">
+            <div className="space-y-3 sm:space-y-6">
+              <div className="flex justify-between items-center">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prénom
-                  </label>
-                  <input
-                    type="text"
-                    value={parentForm.parent1.firstName}
-                    onChange={(e) =>
-                      setParentForm({
-                        ...parentForm,
-                        parent1: {
-                          ...parentForm.parent1,
-                          firstName: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    required
-                  />
+                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Demande de création de compte</h2>
+                  <p className="text-xs sm:text-base text-gray-600 mt-0.5 sm:mt-1">Veuillez remplir le formulaire correspondant à votre profil</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom
-                  </label>
-                  <input
-                    type="text"
-                    value={parentForm.parent1.lastName}
-                    onChange={(e) =>
-                      setParentForm({
-                        ...parentForm,
-                        parent1: {
-                          ...parentForm.parent1,
-                          lastName: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    required
-                  />
+                <button
+                  onClick={() => navigate('/signin')}
+                  className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
+                  {error}
                 </div>
+              )}
+
+              <div className="flex bg-gray-50 rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => setUserType('parent')}
+                  className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-base ${
+                    userType === 'parent'
+                      ? 'bg-white shadow text-gray-900'
+                      : 'text-gray-600 hover:bg-white/50'
+                  }`}
+                >
+                  <span className="text-sm sm:text-lg">👤</span>
+                  Parent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserType('nounou')}
+                  className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-base ${
+                    userType === 'nounou'
+                      ? 'bg-white shadow text-gray-900'
+                      : 'text-gray-600 hover:bg-white/50'
+                  }`}
+                >
+                  <span className="text-sm sm:text-lg">👤</span>
+                  Nounou
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {userType === 'nounou' ? (
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-8">
+                    <div className="w-full sm:w-1/3">
+                      <div className="aspect-square w-full max-w-[150px] mx-auto sm:max-w-none bg-gray-100 rounded-xl overflow-hidden relative">
+                        {nounouData.photoPreview ? (
+                          <img
+                            src={nounouData.photoPreview}
+                            alt={`Photo de ${nounouData.firstName}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                            <Upload size={20} className="sm:w-8 sm:h-8" />
+                            <span className="mt-1 sm:mt-2 text-xs sm:text-sm">Photo d'identité</span>
+                          </div>
+                        )}
+                        <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-20 transition-opacity">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleNounouPhotoChange(file);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 space-y-3 sm:space-y-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                            Prénom
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Prénom"
+                            value={nounouData.firstName}
+                            onChange={(e) =>
+                              setNounouData({ ...nounouData, firstName: e.target.value })
+                            }
+                            className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                            Nom
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Nom"
+                            value={nounouData.lastName}
+                            onChange={(e) =>
+                              setNounouData({ ...nounouData, lastName: e.target.value })
+                            }
+                            className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                            Date de naissance
+                          </label>
+                          <input
+                            type="date"
+                            value={nounouData.birthDate}
+                            onChange={(e) =>
+                              setNounouData({ ...nounouData, birthDate: e.target.value })
+                            }
+                            className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                            Lieu de naissance
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ville de naissance"
+                            value={nounouData.birthPlace}
+                            onChange={(e) =>
+                              setNounouData({ ...nounouData, birthPlace: e.target.value })
+                            }
+                            className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                          Adresse
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Adresse complète"
+                          value={nounouData.address}
+                          onChange={(e) =>
+                            setNounouData({ ...nounouData, address: e.target.value })
+                          }
+                          className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                          Téléphone
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="Numéro de téléphone"
+                          value={nounouData.phone}
+                          onChange={(e) =>
+                            setNounouData({ ...nounouData, phone: e.target.value })
+                          }
+                          className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="votre@email.com"
+                          value={nounouData.email}
+                          onChange={(e) =>
+                            setNounouData({ ...nounouData, email: e.target.value })
+                          }
+                          className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                          Mot de passe
+                        </label>
+                        <input
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 sm:space-y-6">
+                    <div>
+                      <h3 className="text-sm sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">Parent 1</h3>
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                              Prénom
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Prénom"
+                              value={parentData.firstName}
+                              onChange={(e) =>
+                                setParentData({ ...parentData, firstName: e.target.value })
+                              }
+                              className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                              Nom
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Nom"
+                              value={parentData.lastName}
+                              onChange={(e) =>
+                                setParentData({ ...parentData, lastName: e.target.value })
+                              }
+                              className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                              Email
+                            </label>
+                            <input
+                              type="email"
+                              placeholder="votre@email.com"
+                              value={parentData.email}
+                              onChange={(e) =>
+                                setParentData({ ...parentData, email: e.target.value })
+                              }
+                              className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                              Téléphone
+                            </label>
+                            <input
+                              type="tel"
+                              placeholder="Numéro de téléphone"
+                              value={parentData.phone}
+                              onChange={(e) =>
+                                setParentData({ ...parentData, phone: e.target.value })
+                              }
+                              className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="flex items-center space-x-2 mb-3 sm:mb-4">
+                        <input
+                          type="checkbox"
+                          checked={parentData.hasSecondParent}
+                          onChange={(e) =>
+                            setParentData({ ...parentData, hasSecondParent: e.target.checked })
+                          }
+                          className="rounded text-[#7ECBC3] focus:ring-[#7ECBC3]"
+                        />
+                        <span className="text-xs sm:text-sm text-gray-700">Parent 2 (optionnel)</span>
+                      </label>
+
+                      {parentData.hasSecondParent && (
+                        <div className="space-y-3 sm:space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                                Prénom
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Prénom"
+                                value={parentData.secondParentFirstName}
+                                onChange={(e) =>
+                                  setParentData({
+                                    ...parentData,
+                                    secondParentFirstName: e.target.value,
+                                  })
+                                }
+                                className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                                required={parentData.hasSecondParent}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                                Nom
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Nom"
+                                value={parentData.secondParentLastName}
+                                onChange={(e) =>
+                                  setParentData({
+                                    ...parentData,
+                                    secondParentLastName: e.target.value,
+                                  })
+                                }
+                                className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                                required={parentData.hasSecondParent}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                                Email
+                              </label>
+                              <input
+                                type="email"
+                                placeholder="votre@email.com"
+                                value={parentData.secondParentEmail}
+                                onChange={(e) =>
+                                  setParentData({
+                                    ...parentData,
+                                    secondParentEmail: e.target.value,
+                                  })
+                                }
+                                className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                                required={parentData.hasSecondParent}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                                Téléphone
+                              </label>
+                              <input
+                                type="tel"
+                                placeholder="Numéro de téléphone"
+                                value={parentData.secondParentPhone}
+                                onChange={(e) =>
+                                  setParentData({
+                                    ...parentData,
+                                    secondParentPhone: e.target.value,
+                                  })
+                                }
+                                className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                                required={parentData.hasSecondParent}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-sm sm:text-lg font-medium text-gray-900">Enfants</h3>
+                        <button
+                          type="button"
+                          onClick={addChild}
+                          className="text-xs sm:text-sm text-[#7ECBC3] hover:text-[#7ECBC3]/80 font-medium"
+                        >
+                          + Ajouter un enfant
+                        </button>
+                      </div>
+
+                      {parentData.children.map((child, index) => (
+                        <div key={index} className="flex flex-col sm:flex-row gap-3 sm:gap-8 mt-4">
+                          <div className="w-full sm:w-1/3">
+                            <div className="aspect-square w-full max-w-[150px] mx-auto sm:max-w-none bg-gray-100 rounded-xl overflow-hidden relative">
+                              {child.photoPreview ? (
+                                <img
+                                  src={child.photoPreview}
+                                  alt={`Photo de ${child.firstName}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                                  <Upload size={20} className="sm:w-8 sm:h-8" />
+                                  <span className="mt-1 sm:mt-2 text-xs sm:text-sm">Photo de l'enfant</span>
+                                </div>
+                              )}
+                              <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-20 transition-opacity">
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleChildPhotoChange(index, file);
+                                  }}
+                                />
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="flex-1 space-y-3 sm:space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                              <div>
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                                  Prénom de l'enfant
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="Prénom"
+                                  value={child.firstName}
+                                  onChange={(e) => updateChild(index, 'firstName', e.target.value)}
+                                  className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                                  Nom de l'enfant
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="Nom"
+                                  value={child.lastName}
+                                  onChange={(e) => updateChild(index, 'lastName', e.target.value)}
+                                  className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                                  required
+                                />
+                              </div>
+                            </div>
+
+                            {index > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => removeChild(index)}
+                                className="text-xs sm:text-sm text-red-500 hover:text-red-600 font-medium"
+                              >
+                                Supprimer cet enfant
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                        Adresse complète
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Adresse complète"
+                        value={parentData.address}
+                        onChange={(e) =>
+                          setParentData({ ...parentData, address: e.target.value })
+                        }
+                        className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-1">
+                        Mot de passe
+                      </label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-2 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:ring-[#7ECBC3] focus:border-[#7ECBC3] placeholder-gray-400 text-xs sm:text-base"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-[#7ECBC3] text-white py-2 sm:py-3 rounded-lg hover:bg-[#6BA59E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Chargement...' : 'Créer le compte'}
+                </button>
+              </form>
+
+              <div className="mt-8 text-center">
+                <button
+                  onClick={() => navigate('/signin')}
+                  className="text-[#7ECBC3] hover:underline"
+                >
+                  Déjà un compte ? Se connecter
+                </button>
               </div>
             </div>
-
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Parent 2 (optionnel)
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prénom
-                  </label>
-                  <input
-                    type="text"
-                    value={parentForm.parent2.firstName}
-                    onChange={(e) =>
-                      setParentForm({
-                        ...parentForm,
-                        parent2: {
-                          ...parentForm.parent2,
-                          firstName: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom
-                  </label>
-                  <input
-                    type="text"
-                    value={parentForm.parent2.lastName}
-                    onChange={(e) =>
-                      setParentForm({
-                        ...parentForm,
-                        parent2: {
-                          ...parentForm.parent2,
-                          lastName: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Enfant</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prénom
-                  </label>
-                  <input
-                    type="text"
-                    value={parentForm.child.firstName}
-                    onChange={(e) =>
-                      setParentForm({
-                        ...parentForm,
-                        child: {
-                          ...parentForm.child,
-                          firstName: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom
-                  </label>
-                  <input
-                    type="text"
-                    value={parentForm.child.lastName}
-                    onChange={(e) =>
-                      setParentForm({
-                        ...parentForm,
-                        child: {
-                          ...parentForm.child,
-                          lastName: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Adresse
-              </label>
-              <input
-                type="text"
-                value={parentForm.address}
-                onChange={(e) =>
-                  setParentForm({ ...parentForm, address: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Téléphone principal
-                </label>
-                <input
-                  type="tel"
-                  value={parentForm.primaryPhone}
-                  onChange={(e) =>
-                    setParentForm({ ...parentForm, primaryPhone: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Téléphone secondaire (optionnel)
-                </label>
-                <input
-                  type="tel"
-                  value={parentForm.secondaryPhone}
-                  onChange={(e) =>
-                    setParentForm({
-                      ...parentForm,
-                      secondaryPhone: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={parentForm.email}
-                onChange={(e) =>
-                  setParentForm({ ...parentForm, email: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mot de passe
-              </label>
-              <input
-                type="password"
-                value={parentForm.password}
-                onChange={(e) =>
-                  setParentForm({ ...parentForm, password: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-pink-500 text-white py-3 rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Chargement...' : 'Soumettre la demande'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleNounouSubmit} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prénom
-                </label>
-                <input
-                  type="text"
-                  value={nounouForm.firstName}
-                  onChange={(e) =>
-                    setNounouForm({ ...nounouForm, firstName: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom
-                </label>
-                <input
-                  type="text"
-                  value={nounouForm.lastName}
-                  onChange={(e) =>
-                    setNounouForm({ ...nounouForm, lastName: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date de naissance
-                </label>
-                <input
-                  type="date"
-                  value={nounouForm.birthDate}
-                  onChange={(e) =>
-                    setNounouForm({ ...nounouForm, birthDate: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lieu de naissance
-                </label>
-                <input
-                  type="text"
-                  value={nounouForm.birthPlace}
-                  onChange={(e) =>
-                    setNounouForm({ ...nounouForm, birthPlace: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Adresse
-              </label>
-              <input
-                type="text"
-                value={nounouForm.address}
-                onChange={(e) =>
-                  setNounouForm({ ...nounouForm, address: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Téléphone
-              </label>
-              <input
-                type="tel"
-                value={nounouForm.phone}
-                onChange={(e) =>
-                  setNounouForm({ ...nounouForm, phone: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={nounouForm.email}
-                onChange={(e) =>
-                  setNounouForm({ ...nounouForm, email: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mot de passe
-              </label>
-              <input
-                type="password"
-                value={nounouForm.password}
-                onChange={(e) =>
-                  setNounouForm({ ...nounouForm, password: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-pink-500 text-white py-3 rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Chargement...' : 'Soumettre la demande'}
-            </button>
-          </form>
-        )}
-
-        <div className="mt-6 text-center">
-          <span className="text-gray-600">Déjà un compte ?</span>{' '}
-          <button
-            onClick={() => navigate('/signin')}
-            className="text-pink-500 hover:text-pink-600 font-medium"
-          >
-            Se connecter
-          </button>
+          </div>
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ import { CreateAccountForm } from './components/auth/CreateAccountForm';
 import { ParentDashboard } from './components/dashboard/ParentDashboard';
 import { NounouDashboard } from './components/dashboard/NounouDashboard';
 import { GestionnaireDashboard } from './components/dashboard/GestionnaireDashboard';
-import { AdminDashboard } from './components/dashboard/AdminDashboard';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 import { useAuthStore } from './store/authStore';
 
 function App() {

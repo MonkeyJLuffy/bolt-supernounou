@@ -19,6 +19,13 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['lucide-react']
+    include: ['lucide-react'],
+    exclude: ['pg', 'bcrypt']
+  },
+  build: {
+    commonjsOptions: {
+      include: [/node_modules/],
+      exclude: ['pg', 'bcrypt']
+    }
   }
 });

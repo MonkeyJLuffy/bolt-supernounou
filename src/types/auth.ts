@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'gestionnaire' | 'nounou' | 'parent';
+export type UserRole = 'parent' | 'nounou' | 'gestionnaire' | 'admin';
 
 export interface User {
   id: string;
@@ -15,6 +15,6 @@ export interface AuthState {
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, role: UserRole, firstName: string, lastName: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  simulateUser: (role: UserRole) => void;
+  checkAuth: () => Promise<void>;
+  signOut: () => void;
 }
