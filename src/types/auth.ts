@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'parent' | 'nounou' | 'gestionnaire';
+export type UserRole = 'parent' | 'nounou' | 'gestionnaire' | 'admin';
 
 // Interface pour les données utilisateur côté client
 export interface User {
@@ -7,7 +7,7 @@ export interface User {
   role: UserRole;
   firstName: string;
   lastName: string;
-  createdAt: string;
+  createdAt: Date;
 }
 
 // Interface pour les données utilisateur côté serveur
@@ -17,23 +17,26 @@ export interface ServerUser {
   role: UserRole;
   firstName: string;
   lastName: string;
+  createdAt: string;
 }
 
 // Interface pour la réponse d'authentification
 export interface AuthResponse {
-  user: ServerUser;
+  user: User;
   token: string;
 }
 
 // Interface pour l'état d'authentification
 export interface AuthState {
   user: User | null;
-  loading: boolean;
+  token: string | null;
   error: string | null;
+  loading: boolean;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
   signUp: (email: string, password: string, role: UserRole, firstName: string, lastName: string) => Promise<AuthResponse>;
-  checkAuth: () => Promise<void>;
   signOut: () => void;
+  checkAuth: () => Promise<void>;
+  setDemoUser: (user: User) => void;
 }
 
 // Interface pour les props du formulaire d'authentification
@@ -48,7 +51,7 @@ export interface SignInCredentials {
 }
 
 // Interface pour les données d'inscription
-export interface SignUpData extends SignInCredentials {
+export interface SignUpCredentials extends SignInCredentials {
   role: UserRole;
   firstName: string;
   lastName: string;
@@ -57,11 +60,7 @@ export interface SignUpData extends SignInCredentials {
 // Fonction utilitaire pour mapper les données serveur vers le client
 export function mapServerUserToClient(serverUser: ServerUser): User {
   return {
-    id: serverUser.id,
-    email: serverUser.email,
-    role: serverUser.role,
-    firstName: serverUser.firstName,
-    lastName: serverUser.lastName,
-    createdAt: new Date().toISOString()
+    ...serverUser,
+    createdAt: new Date(serverUser.createdAt),
   };
 }

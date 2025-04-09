@@ -4,7 +4,7 @@ export interface Message {
   senderId: string;
   receiverId: string;
   childId: string;
-  timestamp: string;
+  timestamp: Date;
   read: boolean;
   attachments?: string[];
 }

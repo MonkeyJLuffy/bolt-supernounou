@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { useToast } from '../ui/use-toast'
 import { Trash2, Edit2, X, Plus, User, LogOut, ChevronDown } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
+import { motion, AnimatePresence } from 'framer-motion'
+import { themeConfig } from '../../config/theme.config'
+import { useThemeStore } from '../../store/themeStore'
 
 interface Manager {
   id: string
@@ -300,6 +303,69 @@ const CreateUserModal = ({ type, onClose, onCreate }: CreateUserModalProps) => {
   )
 }
 
+// Composant pour les onglets
+const TabButton: React.FC<{
+  isActive: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}> = ({ isActive, onClick, children }) => (
+  <button
+    onClick={onClick}
+    className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${
+      isActive
+        ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+    }`}
+  >
+    {children}
+  </button>
+);
+
+// Composant pour le contenu des onglets
+const TabContent: React.FC<{
+  isActive: boolean;
+  children: React.ReactNode;
+}> = ({ isActive, children }) => (
+  <AnimatePresence mode="wait">
+    {isActive && (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2 }}
+        className="bg-white rounded-b-lg p-6 shadow-sm"
+      >
+        {children}
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+const ThemeButton: React.FC<{
+  themeName: string;
+  isActive: boolean;
+  onClick: () => void;
+  colors: {
+    primary: string;
+    secondary: string;
+    background: string;
+  };
+}> = ({ themeName, isActive, onClick, colors }) => (
+  <button
+    onClick={onClick}
+    className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-200 ${
+      isActive ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
+    }`}
+  >
+    <div className="w-full h-24 rounded-md mb-2" style={{ backgroundColor: colors.background }} />
+    <div className="flex space-x-2 mb-2">
+      <div className="w-8 h-8 rounded-full" style={{ backgroundColor: colors.primary }} />
+      <div className="w-8 h-8 rounded-full" style={{ backgroundColor: colors.secondary }} />
+    </div>
+    <span className="text-sm font-medium text-gray-700">{themeName}</span>
+  </button>
+);
+
 export const AdminDashboard = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -319,6 +385,8 @@ export const AdminDashboard = () => {
   const [selectedUser, setSelectedUser] = useState<Nanny | Parent | null>(null)
   const [showCreateUserModal, setShowCreateUserModal] = useState(false)
   const [createUserType, setCreateUserType] = useState<'nanny' | 'parent'>('nanny')
+  const [activeTab, setActiveTab] = useState<'users' | 'customization'>('users')
+  const { currentTheme, setTheme, themes } = useThemeStore()
 
   useEffect(() => {
     fetchManagers()
@@ -684,225 +752,256 @@ export const AdminDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 bg-gradient-to-br from-[#4B0082]/5 to-white min-h-screen">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-[#4B0082] border-b-2 border-[#4B0082]/20 pb-4">Tableau de bord administrateur</h1>
-        
-        <div className="relative">
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 hover:bg-[#4B0082]/10"
-            onClick={() => setShowUserMenu(!showUserMenu)}
-          >
-            <User className="h-5 w-5 text-[#4B0082]" />
-            <span className="text-[#4B0082]">{user?.email}</span>
-            <ChevronDown className="h-4 w-4 text-[#4B0082]" />
-          </Button>
+    <div className="min-h-screen bg-gray-50">
+      {/* En-tête */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900">Tableau de bord administrateur</h1>
+            <button
+              onClick={() => signOut()}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              Déconnexion
+            </button>
+          </div>
+        </div>
+      </header>
 
-          {showUserMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-              <button
-                onClick={() => {
-                  setShowAccountModal(true);
-                  setShowUserMenu(false);
-                }}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-[#4B0082]/10"
-              >
-                <User className="h-4 w-4" />
-                Mon compte
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-[#4B0082]/10"
-              >
-                <LogOut className="h-4 w-4" />
-                Se déconnecter
-              </button>
+      {/* Navigation par onglets */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <TabButton
+              isActive={activeTab === 'users'}
+              onClick={() => setActiveTab('users')}
+            >
+              Gestion des utilisateurs
+            </TabButton>
+            <TabButton
+              isActive={activeTab === 'customization'}
+              onClick={() => setActiveTab('customization')}
+            >
+              Customisation
+            </TabButton>
+          </nav>
+        </div>
+
+        {/* Contenu des onglets */}
+        <div className="mt-6">
+          <TabContent isActive={activeTab === 'users'}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Liste des parents */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Parents</h2>
+                <div className="space-y-4">
+                  <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des parents</h2>
+                      <Button 
+                        onClick={() => {
+                          setCreateUserType('parent')
+                          setShowCreateUserModal(true)
+                        }}
+                        className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ajouter un parent
+                      </Button>
+                    </div>
+                    {isLoading ? (
+                      <div className="flex justify-center items-center h-32">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
+                      </div>
+                    ) : parents.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Aucun parent n'a été créé.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {parents.map((parent) => (
+                          <div
+                            key={parent.id}
+                            className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
+                            onClick={() => setSelectedUser({ ...parent, type: 'parent' })}
+                          >
+                            <div>
+                              <p className="font-medium text-[#4B0082]">{parent.first_name} {parent.last_name}</p>
+                              <p className="text-sm text-gray-500">{parent.email}</p>
+                              <p className="text-sm text-gray-500">
+                                Créé le {new Date(parent.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="hover:bg-[#4B0082]/10 transition-colors duration-200"
+                            >
+                              <Edit2 className="h-4 w-4 text-[#4B0082]" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                </div>
+              </div>
+
+              {/* Liste des nounous */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Nounous</h2>
+                <div className="space-y-4">
+                  <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des nounous</h2>
+                      <Button 
+                        onClick={() => {
+                          setCreateUserType('nanny')
+                          setShowCreateUserModal(true)
+                        }}
+                        className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ajouter une nounou
+                      </Button>
+                    </div>
+                    {isLoading ? (
+                      <div className="flex justify-center items-center h-32">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
+                      </div>
+                    ) : nannies.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Aucune nounou n'a été créée.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {nannies.map((nanny) => (
+                          <div
+                            key={nanny.id}
+                            className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
+                            onClick={() => setSelectedUser({ ...nanny, type: 'nanny' })}
+                          >
+                            <div>
+                              <p className="font-medium text-[#4B0082]">{nanny.first_name} {nanny.last_name}</p>
+                              <p className="text-sm text-gray-500">{nanny.email}</p>
+                              <p className="text-sm text-gray-500">
+                                Créée le {new Date(nanny.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="hover:bg-[#4B0082]/10 transition-colors duration-200"
+                            >
+                              <Edit2 className="h-4 w-4 text-[#4B0082]" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                </div>
+              </div>
+
+              {/* Liste des gestionnaires */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Gestionnaires</h2>
+                <div className="space-y-4">
+                  <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des gestionnaires</h2>
+                      <Button 
+                        onClick={() => setShowCreateModal(true)}
+                        className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ajouter un gestionnaire
+                      </Button>
+                    </div>
+                    {isLoading ? (
+                      <div className="flex justify-center items-center h-32">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
+                      </div>
+                    ) : managers.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Aucun gestionnaire n'a été créé.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {managers.map((manager) => (
+                          <div
+                            key={manager.id}
+                            className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
+                            onClick={() => setSelectedManager(manager)}
+                          >
+                            <div>
+                              <p className="font-medium text-[#4B0082]">{manager.email}</p>
+                              <p className="text-sm text-gray-500">
+                                Créé le {new Date(manager.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="hover:bg-[#4B0082]/10 transition-colors duration-200"
+                            >
+                              <Edit2 className="h-4 w-4 text-[#4B0082]" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                </div>
+              </div>
             </div>
-          )}
+          </TabContent>
+
+          <TabContent isActive={activeTab === 'customization'}>
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Customisation de l'application</h2>
+              <div className="space-y-6">
+                {/* Sélection du thème */}
+                <div>
+                  <h3 className="text-md font-medium text-gray-900 mb-3">Thème de l'application</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <ThemeButton
+                      themeName="Classique"
+                      isActive={currentTheme === 'default'}
+                      onClick={() => setTheme('default')}
+                      colors={{
+                        primary: themes.default.colors.primary.main,
+                        secondary: themes.default.colors.secondary.main,
+                        background: themes.default.colors.background.default,
+                      }}
+                    />
+                    <ThemeButton
+                      themeName="Sombre"
+                      isActive={currentTheme === 'dark'}
+                      onClick={() => setTheme('dark')}
+                      colors={{
+                        primary: themes.dark.colors.primary.main,
+                        secondary: themes.dark.colors.secondary.main,
+                        background: themes.dark.colors.background.default,
+                      }}
+                    />
+                    <ThemeButton
+                      themeName="Pastel"
+                      isActive={currentTheme === 'pastel'}
+                      onClick={() => setTheme('pastel')}
+                      colors={{
+                        primary: themes.pastel.colors.primary.main,
+                        secondary: themes.pastel.colors.secondary.main,
+                        background: themes.pastel.colors.background.default,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabContent>
         </div>
       </div>
-      
-      <Tabs defaultValue="manager" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-[#4B0082]/10 p-1 rounded-lg">
-          <TabsTrigger 
-            value="manager" 
-            className="data-[state=active]:bg-[#4B0082] data-[state=active]:text-white rounded-md transition-all duration-200"
-          >
-            Gestionnaires
-          </TabsTrigger>
-          <TabsTrigger 
-            value="nanny" 
-            className="data-[state=active]:bg-[#4B0082] data-[state=active]:text-white rounded-md transition-all duration-200"
-          >
-            Nounous
-          </TabsTrigger>
-          <TabsTrigger 
-            value="parent" 
-            className="data-[state=active]:bg-[#4B0082] data-[state=active]:text-white rounded-md transition-all duration-200"
-          >
-            Parents
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="manager">
-          <div className="space-y-6">
-            <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des gestionnaires</h2>
-                <Button 
-                  onClick={() => setShowCreateModal(true)}
-                  className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter un gestionnaire
-                </Button>
-              </div>
-              {isLoading ? (
-                <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
-                </div>
-              ) : managers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Aucun gestionnaire n'a été créé.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {managers.map((manager) => (
-                    <div
-                      key={manager.id}
-                      className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
-                      onClick={() => setSelectedManager(manager)}
-                    >
-                      <div>
-                        <p className="font-medium text-[#4B0082]">{manager.email}</p>
-                        <p className="text-sm text-gray-500">
-                          Créé le {new Date(manager.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="hover:bg-[#4B0082]/10 transition-colors duration-200"
-                      >
-                        <Edit2 className="h-4 w-4 text-[#4B0082]" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="nanny">
-          <div className="space-y-6">
-            <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des nounous</h2>
-                <Button 
-                  onClick={() => {
-                    setCreateUserType('nanny')
-                    setShowCreateUserModal(true)
-                  }}
-                  className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter une nounou
-                </Button>
-              </div>
-              {isLoading ? (
-                <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
-                </div>
-              ) : nannies.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Aucune nounou n'a été créée.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {nannies.map((nanny) => (
-                    <div
-                      key={nanny.id}
-                      className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
-                      onClick={() => setSelectedUser({ ...nanny, type: 'nanny' })}
-                    >
-                      <div>
-                        <p className="font-medium text-[#4B0082]">{nanny.first_name} {nanny.last_name}</p>
-                        <p className="text-sm text-gray-500">{nanny.email}</p>
-                        <p className="text-sm text-gray-500">
-                          Créée le {new Date(nanny.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="hover:bg-[#4B0082]/10 transition-colors duration-200"
-                      >
-                        <Edit2 className="h-4 w-4 text-[#4B0082]" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="parent">
-          <div className="space-y-6">
-            <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des parents</h2>
-                <Button 
-                  onClick={() => {
-                    setCreateUserType('parent')
-                    setShowCreateUserModal(true)
-                  }}
-                  className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter un parent
-                </Button>
-              </div>
-              {isLoading ? (
-                <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
-                </div>
-              ) : parents.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Aucun parent n'a été créé.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {parents.map((parent) => (
-                    <div
-                      key={parent.id}
-                      className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
-                      onClick={() => setSelectedUser({ ...parent, type: 'parent' })}
-                    >
-                      <div>
-                        <p className="font-medium text-[#4B0082]">{parent.first_name} {parent.last_name}</p>
-                        <p className="text-sm text-gray-500">{parent.email}</p>
-                        <p className="text-sm text-gray-500">
-                          Créé le {new Date(parent.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="hover:bg-[#4B0082]/10 transition-colors duration-200"
-                      >
-                        <Edit2 className="h-4 w-4 text-[#4B0082]" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
 
       {showAccountModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">

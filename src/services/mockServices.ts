@@ -7,16 +7,85 @@ import { mockChildren, mockCaregivers, mockAbsences, mockMessages, getDayStatusF
 // Simulation du délai réseau
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Données de démonstration
+const demoChildren: Child[] = [
+  {
+    id: 'child-1',
+    name: 'Emma Dupont',
+    age: 4,
+    parentId: 'demo-parent-123',
+    caregiverId: 'caregiver-1',
+    birthDate: new Date('2019-05-15'),
+    createdAt: new Date(),
+  },
+  {
+    id: 'child-2',
+    name: 'Lucas Dupont',
+    age: 2,
+    parentId: 'demo-parent-123',
+    caregiverId: 'caregiver-1',
+    birthDate: new Date('2021-08-20'),
+    createdAt: new Date(),
+  },
+];
+
+const demoCaregiver: Caregiver = {
+  id: 'caregiver-1',
+  firstName: 'Sophie',
+  lastName: 'Martin',
+  email: 'sophie.martin@example.com',
+  phone: '06 12 34 56 78',
+  address: '123 rue de la Paix, 75001 Paris',
+  hourlyRate: 12.50,
+  dailyRate: 100,
+  maxChildren: 4,
+  experience: 10,
+  qualifications: ['CAP Petite Enfance', 'Premiers Secours'],
+  availability: {
+    monday: true,
+    tuesday: true,
+    wednesday: false,
+    thursday: true,
+    friday: true,
+    saturday: false,
+    sunday: false,
+  },
+  bio: 'Nounou expérimentée avec 10 ans d\'expérience',
+  profileImage: 'https://example.com/profile.jpg',
+  createdAt: new Date(),
+};
+
+const demoMessages: Message[] = [
+  {
+    id: 'msg-1',
+    content: 'Bonjour, Emma a bien dormi aujourd\'hui.',
+    senderId: 'caregiver-1',
+    receiverId: 'demo-parent-123',
+    childId: 'child-1',
+    timestamp: new Date(Date.now() - 3600000), // 1 heure avant
+    read: false,
+  },
+  {
+    id: 'msg-2',
+    content: 'Merci pour l\'information. Elle a bien mangé ?',
+    senderId: 'demo-parent-123',
+    receiverId: 'caregiver-1',
+    childId: 'child-1',
+    timestamp: new Date(Date.now() - 1800000), // 30 minutes avant
+    read: false,
+  },
+];
+
 // Service pour les enfants
 export const mockChildService: ChildService = {
   getChildrenByParentId: async (parentId: string): Promise<Child[]> => {
     await delay(300);
-    return mockChildren.filter(child => child.parentId === parentId);
+    return demoChildren.filter(child => child.parentId === parentId);
   },
   
   getChildById: async (childId: string): Promise<Child | null> => {
     await delay(200);
-    const child = mockChildren.find(c => c.id === childId);
+    const child = demoChildren.find(c => c.id === childId);
     return child || null;
   },
   
@@ -32,7 +101,7 @@ export const mockChildService: ChildService = {
   
   updateChild: async (childId: string, child: Partial<Child>): Promise<Child> => {
     await delay(400);
-    const existingChild = mockChildren.find(c => c.id === childId);
+    const existingChild = demoChildren.find(c => c.id === childId);
     if (!existingChild) {
       throw new Error(`Enfant avec l'ID ${childId} non trouvé`);
     }
@@ -57,11 +126,7 @@ export const mockCaregiverService: CaregiverService = {
   
   getCaregiversByChildId: async (childId: string): Promise<Caregiver[]> => {
     await delay(300);
-    const child = mockChildren.find(c => c.id === childId);
-    if (!child) return [];
-    
-    const caregiver = mockCaregivers.find(c => c.id === child.caregiverId);
-    return caregiver ? [caregiver] : [];
+    return [demoCaregiver];
   },
   
   getAllCaregivers: async (): Promise<Caregiver[]> => {
@@ -149,7 +214,13 @@ export const mockCalendarService: CalendarService = {
   
   getDayStatus: async (date: Date, childId: string, caregiverId: string): Promise<DayStatus> => {
     await delay(100);
-    return getDayStatusFromAbsences(date, childId, caregiverId);
+    // Simuler différents statuts pour les jours
+    const day = date.getDay();
+    if (day === 0 || day === 6) return 'conge-am'; // Week-end
+    if (date.getDate() === 15) return 'absence-prevue'; // 15 du mois
+    if (date.getDate() === 20) return 'absence-validee'; // 20 du mois
+    if (date.getDate() === 25) return 'conge-maladie'; // 25 du mois
+    return null;
   }
 };
 
@@ -157,7 +228,7 @@ export const mockCalendarService: CalendarService = {
 export const mockMessageService: MessageService = {
   getMessagesByChildId: async (childId: string): Promise<Message[]> => {
     await delay(300);
-    return mockMessages.filter(m => m.childId === childId);
+    return demoMessages.filter(m => m.childId === childId);
   },
   
   getMessagesBetweenUsers: async (userId1: string, userId2: string, childId: string): Promise<Message[]> => {
@@ -179,11 +250,11 @@ export const mockMessageService: MessageService = {
     await delay(300);
     const newMessage: Message = {
       ...message,
-      id: `message-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      read: false
+      id: `msg-${Date.now()}`,
+      timestamp: new Date(),
+      read: false,
     };
-    // Dans une vraie implémentation, on ajouterait le message à la base de données
+    demoMessages.push(newMessage);
     return newMessage;
   },
   

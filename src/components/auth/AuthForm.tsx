@@ -3,6 +3,10 @@ import { useAuthStore } from '../../store/authStore';
 import { Heart, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthFormProps, UserRole } from '../../types/auth';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { useToast } from '../ui/use-toast';
 
 export function AuthForm({ type }: AuthFormProps) {
   const [email, setEmail] = useState('');
@@ -11,10 +15,14 @@ export function AuthForm({ type }: AuthFormProps) {
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<UserRole>('parent');
   const navigate = useNavigate();
-  const { signIn, signUp, loading, error } = useAuthStore();
+  const { signIn, signUp, error, setDemoUser } = useAuthStore();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+
     try {
       if (type === 'signin') {
         const result = await signIn(email, password);
@@ -28,8 +36,28 @@ export function AuthForm({ type }: AuthFormProps) {
         navigate('/tableau-de-bord');
       }
     } catch (error) {
-      console.error('Erreur lors de la connexion:', error);
+      toast({
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleDemoParent = () => {
+    const demoUser = {
+      id: 'demo-parent-123',
+      email: 'parent@demo.com',
+      role: 'parent' as const,
+      firstName: 'Jean',
+      lastName: 'Dupont',
+      createdAt: new Date(),
+    };
+
+    setDemoUser(demoUser);
+    navigate('/tableau-de-bord');
   };
 
   const fillAdminCredentials = () => {
@@ -148,26 +176,38 @@ export function AuthForm({ type }: AuthFormProps) {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#7ECBC3] text-white py-2 sm:py-3 rounded-lg hover:bg-[#6BA59E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Chargement...' : type === 'signin' ? 'Se connecter' : 'S\'inscrire'}
-              </button>
-            </form>
-
-            {type === 'signin' && (
-              <div className="mt-4 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                <p className="text-xs text-gray-500 mb-2">Test rapide (développement uniquement) :</p>
-                <button
-                  onClick={fillAdminCredentials}
-                  className="w-full bg-gray-200 text-gray-700 py-1.5 rounded text-sm hover:bg-gray-300 transition-colors"
+              <div className="flex flex-col gap-4">
+                <Button
+                  type="submit"
+                  className="w-full bg-[#7ECBC3] text-white py-2 sm:py-3 rounded-lg hover:bg-[#6BA59E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 >
-                  Remplir identifiants admin
-                </button>
+                  {isLoading ? 'Chargement...' : type === 'signin' ? 'Se connecter' : 'S\'inscrire'}
+                </Button>
+
+                {type === 'signin' && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleDemoParent}
+                    >
+                      Voir le dashboard parent (démo)
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={fillAdminCredentials}
+                    >
+                      Remplir identifiants admin
+                    </Button>
+                  </>
+                )}
               </div>
-            )}
+            </form>
 
             <div className="mt-8 text-center">
               <button

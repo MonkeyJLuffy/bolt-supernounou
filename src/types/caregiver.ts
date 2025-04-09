@@ -21,6 +21,7 @@ export interface Caregiver {
   qualifications: string[];
   bio?: string;
   profileImage?: string;
+  createdAt: Date;
 }
 
 export interface CaregiverService {

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
+import { useThemeStore } from '../../store/themeStore';
 import { Send, Plus, User, ChevronDown } from 'lucide-react';
 import {
   startOfMonth,
@@ -28,6 +29,7 @@ interface UIMessage {
 
 export function ParentDashboard() {
   const { user, signOut } = useAuthStore();
+  const { theme } = useThemeStore();
   const [messageInput, setMessageInput] = useState('');
   const [currentDate] = useState(new Date());
   const [selectionStart, setSelectionStart] = useState<Date | null>(null);
@@ -131,17 +133,17 @@ export function ParentDashboard() {
   const getStatusColor = (status: DayStatus): string => {
     switch (status) {
       case 'conge-am':
-        return 'bg-[#FFD166]';
+        return `bg-[${theme.colors.warning.main}]`;
       case 'absence-prevue':
-        return 'bg-[#F4A261]';
+        return `bg-[${theme.colors.warning.light}]`;
       case 'absence-validee':
-        return 'bg-[#84A98C] text-white';
+        return `bg-[${theme.colors.success.main}] text-white`;
       case 'conge-maladie':
-        return 'bg-[#E76F51] text-white';
+        return `bg-[${theme.colors.error.main}] text-white`;
       case 'selected':
-        return 'bg-[#7ECBC3] text-white';
+        return `bg-[${theme.colors.primary.main}] text-white`;
       default:
-        return 'bg-gray-50 hover:bg-gray-100';
+        return `bg-[${theme.colors.background.default}] hover:bg-[${theme.colors.background.paper}]`;
     }
   };
 
@@ -367,32 +369,32 @@ export function ParentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen bg-[${theme.colors.background.default}]`}>
       {/* Navigation */}
-      <div className="bg-white shadow">
+      <div className={`bg-[${theme.colors.background.paper}] shadow`}>
         <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-[#7ECBC3] mr-12">Super Nounou</h1>
+              <h1 className={`text-2xl font-bold text-[${theme.colors.primary.main}] mr-12`}>Super Nounou</h1>
               <div className="flex gap-2">
-                <button className="bg-[#7ECBC3] text-white px-6 py-2 rounded-full font-medium">
+                <button className={`bg-[${theme.colors.primary.main}] text-white px-6 py-2 rounded-full font-medium`}>
                   Mon tableau de bord
                 </button>
-                <button className="border-2 border-[#B5E5E0] text-gray-700 px-6 py-2 rounded-full font-medium hover:bg-[#B5E5E0] transition-colors">
+                <button className={`border-2 border-[${theme.colors.primary.light}] text-[${theme.colors.text.primary}] px-6 py-2 rounded-full font-medium hover:bg-[${theme.colors.primary.light}] transition-colors`}>
                   Trouver une nounou
                 </button>
-                <button className="border-2 border-[#B5E5E0] text-gray-700 px-6 py-2 rounded-full font-medium hover:bg-[#B5E5E0] transition-colors">
+                <button className={`border-2 border-[${theme.colors.primary.light}] text-[${theme.colors.text.primary}] px-6 py-2 rounded-full font-medium hover:bg-[${theme.colors.primary.light}] transition-colors`}>
                   Paramètres
                 </button>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-gray-700">
+              <span className={`text-[${theme.colors.text.primary}]`}>
                 {user?.firstName} {user?.lastName}
               </span>
               <button
                 onClick={signOut}
-                className="bg-[#7ECBC3] text-white px-4 py-2 rounded-lg hover:bg-[#6BA59E] transition-colors"
+                className={`bg-[${theme.colors.primary.main}] text-white px-4 py-2 rounded-lg hover:bg-[${theme.colors.primary.dark}] transition-colors`}
               >
                 Se déconnecter
               </button>
@@ -404,9 +406,9 @@ export function ParentDashboard() {
       {/* Main Container */}
       <div className="flex flex-1 h-[calc(100vh-64px)]">
         {/* Left Column - Child Profile */}
-        <div className="w-60 bg-white border-r border-gray-100 p-6 flex flex-col items-center">
-          <div className="w-24 h-24 bg-[#B5E5E0] rounded-full flex items-center justify-center mb-4">
-            <User className="w-12 h-12 text-[#7ECBC3]" />
+        <div className={`w-60 bg-[${theme.colors.background.paper}] border-r border-[${theme.colors.background.default}] p-6 flex flex-col items-center`}>
+          <div className={`w-24 h-24 bg-[${theme.colors.primary.light}] rounded-full flex items-center justify-center mb-4`}>
+            <User className={`w-12 h-12 text-[${theme.colors.primary.main}]`} />
           </div>
           
           {/* Sélecteur d'enfant */}
@@ -446,20 +448,20 @@ export function ParentDashboard() {
         <div className="flex-1 flex flex-col">
           {/* Caregiver Banner */}
           {caregiver && (
-            <div className="bg-white border-b border-gray-100 p-5 flex items-start">
-              <div className="w-24 h-24 bg-[#B5E5E0] rounded-xl flex items-center justify-center mr-5">
-                <User className="w-12 h-12 text-[#7ECBC3]" />
+            <div className={`bg-[${theme.colors.background.paper}] border-b border-[${theme.colors.background.default}] p-5 flex items-start`}>
+              <div className={`w-24 h-24 bg-[${theme.colors.primary.light}] rounded-xl flex items-center justify-center mr-5`}>
+                <User className={`w-12 h-12 text-[${theme.colors.primary.main}]`} />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-semibold mb-3">{caregiver.firstName} {caregiver.lastName}</h2>
+                <h2 className={`text-xl font-semibold mb-3 text-[${theme.colors.text.primary}]`}>{caregiver.firstName} {caregiver.lastName}</h2>
                 <div className="flex items-center gap-4">
-                  <span className="bg-gray-50 px-4 py-2 rounded-lg text-sm">
+                  <span className={`bg-[${theme.colors.background.default}] px-4 py-2 rounded-lg text-sm text-[${theme.colors.text.secondary}]`}>
                     Taux horaire : {caregiver.hourlyRate.toFixed(2)} €/h
                   </span>
-                  <span className="bg-gray-50 px-4 py-2 rounded-lg text-sm">
+                  <span className={`bg-[${theme.colors.background.default}] px-4 py-2 rounded-lg text-sm text-[${theme.colors.text.secondary}]`}>
                     Frais journaliers : {caregiver.dailyRate.toFixed(2)} €/jour
                   </span>
-                  <button className="bg-[#F7EDE2] text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-[#7ECBC3] hover:text-white transition-colors">
+                  <button className={`bg-[${theme.colors.secondary.light}] text-[${theme.colors.text.primary}] px-4 py-2 rounded-lg font-medium hover:bg-[${theme.colors.secondary.main}] hover:text-white transition-colors`}>
                     Voir le contrat
                   </button>
                 </div>
@@ -470,7 +472,7 @@ export function ParentDashboard() {
           {/* Main Content */}
           <div className="flex flex-1 overflow-hidden">
             {/* Calendar Section */}
-            <div className="w-1/3 bg-white p-5 overflow-y-auto" ref={calendarRef}>
+            <div className={`w-1/3 bg-[${theme.colors.background.paper}] p-5 overflow-y-auto`} ref={calendarRef}>
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold">Planning de garde {activeChild ? `pour ${activeChild.name}` : ''}</h3>
                 <div className="text-sm text-gray-500">
@@ -520,7 +522,7 @@ export function ParentDashboard() {
             </div>
 
             {/* Messaging Section */}
-            <div className="w-2/3 bg-white border-l border-gray-100 flex flex-col">
+            <div className={`w-2/3 bg-[${theme.colors.background.paper}] border-l border-[${theme.colors.background.default}] flex flex-col`}>
               <div className="p-5 border-b border-gray-100 font-medium">
                 Messagerie {activeChild ? `avec ${activeChild.name}` : ''}
               </div>

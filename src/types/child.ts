@@ -4,7 +4,8 @@ export interface Child {
   age: number;
   parentId: string;
   caregiverId: string;
-  birthDate: string;
+  birthDate: Date;
+  createdAt: Date;
   allergies?: string[];
   notes?: string;
 }
