@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
-import { UserRole } from '../../types/auth';
 import { useAuthStore } from '../../store/authStore';
 import { Heart, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-interface AuthFormProps {
-  type: 'signin' | 'signup';
-}
+import { AuthFormProps, UserRole } from '../../types/auth';
 
 export function AuthForm({ type }: AuthFormProps) {
   const [email, setEmail] = useState('');
@@ -21,8 +17,12 @@ export function AuthForm({ type }: AuthFormProps) {
     e.preventDefault();
     try {
       if (type === 'signin') {
-        await signIn(email, password);
-        navigate('/tableau-de-bord');
+        const result = await signIn(email, password);
+        if (result.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/tableau-de-bord');
+        }
       } else {
         await signUp(email, password, role, firstName, lastName);
         navigate('/tableau-de-bord');

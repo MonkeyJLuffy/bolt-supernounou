@@ -1,22 +1,12 @@
 import { create } from 'zustand';
-import { User, UserRole } from '../types/auth';
-
-interface AuthState {
-  user: User | null;
-  loading: boolean;
-  error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, role: UserRole, firstName: string, lastName: string) => Promise<void>;
-  checkAuth: () => Promise<void>;
-  signOut: () => void;
-}
+import { AuthState, AuthResponse, User, UserRole, mapServerUserToClient } from '../types/auth';
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: false,
   error: null,
 
-  signIn: async (email: string, password: string) => {
+  signIn: async (email: string, password: string): Promise<AuthResponse> => {
     try {
       set({ loading: true, error: null });
       const response = await fetch('http://localhost:3000/api/auth/signin', {
@@ -34,15 +24,23 @@ export const useAuthStore = create<AuthState>((set) => ({
         throw new Error(data.message || 'Erreur de connexion');
       }
 
+      // Stocker le token dans le localStorage
       localStorage.setItem('token', data.token);
-      set({ user: data.user, loading: false });
+      
+      // Mapper les données du serveur vers notre interface User
+      const user = mapServerUserToClient(data.user);
+      
+      // Mettre à jour l'état de l'utilisateur
+      set({ user, loading: false });
+
+      return data;
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Erreur de connexion', loading: false });
       throw error;
     }
   },
 
-  signUp: async (email: string, password: string, role: UserRole, firstName: string, lastName: string) => {
+  signUp: async (email: string, password: string, role: UserRole, firstName: string, lastName: string): Promise<AuthResponse> => {
     try {
       set({ loading: true, error: null });
       const response = await fetch('http://localhost:3000/api/auth/register', {
@@ -55,8 +53,8 @@ export const useAuthStore = create<AuthState>((set) => ({
           email, 
           password, 
           role,
-          first_name: firstName,
-          last_name: lastName
+          firstName,
+          lastName
         }),
       });
 
@@ -66,9 +64,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         throw new Error(data.message || 'Erreur lors de l\'inscription');
       }
 
-      // Stocker le token et l'utilisateur directement
+      // Stocker le token dans le localStorage
       localStorage.setItem('token', data.token);
-      set({ user: data.user, loading: false });
+      
+      // Mapper les données du serveur vers notre interface User
+      const user = mapServerUserToClient(data.user);
+      
+      // Mettre à jour l'état de l'utilisateur
+      set({ user, loading: false });
+
+      return data;
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Erreur lors de l\'inscription', loading: false });
       throw error;
@@ -99,7 +104,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const data = await response.json();
       localStorage.setItem('token', data.token);
-      set({ user: data.user, loading: false });
+      
+      // Mapper les données du serveur vers notre interface User
+      const user = mapServerUserToClient(data.user);
+      
+      // Mettre à jour l'état de l'utilisateur
+      set({ user, loading: false });
     } catch (error) {
       localStorage.removeItem('token');
       set({ user: null, loading: false });

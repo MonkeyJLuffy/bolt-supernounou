@@ -2,6 +2,7 @@ import { pool } from '../db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { User, UserCreateInput, UserUpdateInput, UserLoginInput, UserLoginResponse } from '../types/user.js';
+import { UserRole } from '../types/user.js';
 
 export class UserService {
   private static readonly SALT_ROUNDS = 10;
@@ -249,6 +250,32 @@ export class UserService {
 
   async deleteManager(id: string) {
     await pool.query('DELETE FROM users WHERE id = $1 AND role = $2', [id, 'gestionnaire']);
+  }
+
+  async getUserByEmail(email: string) {
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        'SELECT u.*, p.role as user_role, p.first_name, p.last_name FROM auth.users u JOIN public.profiles p ON u.id = p.id WHERE u.email = $1',
+        [email]
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const user = result.rows[0];
+      return {
+        id: user.id,
+        email: user.email,
+        role: user.user_role,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        password: user.encrypted_password
+      };
+    } finally {
+      client.release();
+    }
   }
 }
 

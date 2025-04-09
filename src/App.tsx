@@ -26,6 +26,16 @@ function App() {
         <Route path="/signin" element={<AuthForm type="signin" />} />
         <Route path="/signup" element={<CreateAccountForm />} />
         <Route
+          path="/admin"
+          element={
+            user?.role === 'admin' ? (
+              <AdminDashboard />
+            ) : (
+              <Navigate to="/signin" />
+            )
+          }
+        />
+        <Route
           path="/tableau-de-bord"
           element={
             user ? (
@@ -35,8 +45,6 @@ function App() {
                 <NounouDashboard />
               ) : user.role === 'gestionnaire' ? (
                 <GestionnaireDashboard />
-              ) : user.role === 'admin' ? (
-                <AdminDashboard />
               ) : (
                 <Navigate to="/signin" />
               )
