@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import bcrypt from 'bcrypt';
@@ -13,7 +13,8 @@ import { authenticateToken } from '../middleware/auth.js';
 interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: string;
+    email: string;
+    role: UserRole;
   };
 }
 
@@ -26,7 +27,7 @@ interface User {
   last_name?: string;
 }
 
-const router = express.Router();
+const router = Router();
 const userService = new UserService();
 const authService = new AuthService();
 
@@ -104,7 +105,8 @@ router.post('/signin', async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         first_name: user.first_name,
-        last_name: user.last_name
+        last_name: user.last_name,
+        first_login: user.role === 'gestionnaire' ? user.first_login : false
       },
       token
     });
@@ -115,9 +117,13 @@ router.post('/signin', async (req: Request, res: Response) => {
 });
 
 // Route de vérification de session
-router.get('/check-session', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/check-session', authenticate, async (req: Request, res: Response) => {
   try {
-    const user = await userService.getUserById(req.user!.id);
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ message: 'Non authentifié' });
+    }
+    const user = await userService.getUserById(authReq.user.id);
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
@@ -136,9 +142,13 @@ router.post('/signout', (req: Request, res: Response) => {
 });
 
 // Routes protégées
-router.get('/profile', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/profile', authenticate, async (req: Request, res: Response) => {
   try {
-    const user = await userService.getUserById(req.user!.id);
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ message: 'Non authentifié' });
+    }
+    const user = await userService.getUserById(authReq.user.id);
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
@@ -151,9 +161,13 @@ router.get('/profile', authenticate, async (req: AuthenticatedRequest, res: Resp
   }
 });
 
-router.put('/profile', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.put('/profile', authenticate, async (req: Request, res: Response) => {
   try {
-    const user = await userService.updateUser(req.user!.id, req.body);
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ message: 'Non authentifié' });
+    }
+    const user = await userService.updateUser(authReq.user.id, req.body);
     const { password_hash, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
   } catch (error) {
@@ -163,7 +177,7 @@ router.put('/profile', authenticate, async (req: AuthenticatedRequest, res: Resp
 });
 
 // Routes admin
-router.get('/users', authenticate, authorize('admin', 'gestionnaire'), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/users', authenticate, authorize('admin', 'gestionnaire'), async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -178,7 +192,7 @@ router.get('/users', authenticate, authorize('admin', 'gestionnaire'), async (re
   }
 });
 
-router.delete('/users/:id', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res: Response) => {
+router.delete('/users/:id', authenticate, authorize('admin'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await userService.deleteUser(id);
@@ -190,10 +204,14 @@ router.delete('/users/:id', authenticate, authorize('admin'), async (req: Authen
 });
 
 // Endpoint de vérification admin
-router.post('/verify-admin', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/verify-admin', authenticate, async (req: Request, res: Response) => {
   try {
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ message: 'Non authentifié' });
+    }
     // Vérifier si l'utilisateur est un admin
-    if (req.user?.role !== 'admin') {
+    if (authReq.user.role !== 'admin') {
       return res.status(403).json({ message: 'Accès non autorisé' });
     }
 
@@ -213,6 +231,43 @@ router.post('/verify-admin', authenticate, async (req: AuthenticatedRequest, res
     res.json({ message: 'Vérification admin réussie' });
   } catch (error) {
     console.error('Erreur lors de la vérification admin:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+router.post('/change-password', authenticate, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ message: 'Non authentifié' });
+    }
+    const { newPassword } = req.body;
+    const userId = authReq.user.id;
+
+    await userService.updatePassword(userId, newPassword);
+    
+    res.json({ message: 'Mot de passe mis à jour avec succès' });
+  } catch (error) {
+    console.error('Erreur lors du changement de mot de passe:', error);
+    res.status(500).json({ message: 'Erreur lors du changement de mot de passe' });
+  }
+});
+
+// Route pour récupérer les informations de l'utilisateur connecté
+router.get('/me', authenticate, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.user) {
+      return res.status(401).json({ message: 'Non authentifié' });
+    }
+    const user = await userService.getUserById(authReq.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+    const { password_hash, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des informations utilisateur:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });

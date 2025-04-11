@@ -4,7 +4,7 @@ import { UserRole } from '../types/user.js';
 
 interface AuthenticatedRequest extends Request {
   user?: {
-    userId: string;
+    id: string;
     email: string;
     role: UserRole;
   };
@@ -21,7 +21,7 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
+      id: string;
       email: string;
       role: UserRole;
     };

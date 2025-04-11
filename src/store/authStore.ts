@@ -19,7 +19,7 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           set({ loading: true });
-          const response = await fetch('http://localhost:3000/api/auth/verify', {
+          const response = await fetch('http://localhost:3000/api/auth/me', {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`,

@@ -1,14 +1,17 @@
-export type UserRole = 'admin' | 'gestionnaire' | 'nounou' | 'parent';
+import { Request } from 'express';
+
+export type UserRole = 'admin' | 'gestionnaire' | 'parent' | 'nounou';
 
 export interface User {
   id: string;
   email: string;
-  password_hash: string;
   role: UserRole;
-  created_at: Date;
-  updated_at: Date;
   first_name?: string;
   last_name?: string;
+  first_login?: boolean;
+  password_hash?: string;
+  created_at: Date;
+  updated_at: Date;
   phone?: string;
   address?: string;
   city?: string;
@@ -49,4 +52,12 @@ export interface UserLoginInput {
 export interface UserLoginResponse {
   user: Omit<User, 'password_hash'>;
   token: string;
+}
+
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: UserRole;
+  };
 } 
