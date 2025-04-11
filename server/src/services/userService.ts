@@ -209,11 +209,11 @@ export class UserService {
     return result.rows;
   }
 
-  async createManager(data: { email: string; password: string }) {
+  async createManager(data: { email: string; password: string; first_name: string; last_name: string }) {
     const hashedPassword = await bcrypt.hash(data.password, 10);
     const result = await pool.query(
-      'INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email, role, created_at',
-      [data.email, hashedPassword, 'gestionnaire']
+      'INSERT INTO users (email, password_hash, role, first_name, last_name) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, role, first_name, last_name, created_at',
+      [data.email, hashedPassword, 'gestionnaire', data.first_name, data.last_name]
     );
     return result.rows[0];
   }
@@ -249,33 +249,22 @@ export class UserService {
   }
 
   async deleteManager(id: string) {
-    await pool.query('DELETE FROM users WHERE id = $1 AND role = $2', [id, 'gestionnaire']);
+    const result = await pool.query(
+      'DELETE FROM users WHERE id = $1 AND role = $2',
+      [id, 'gestionnaire']
+    );
+
+    if (result.rowCount === 0) {
+      throw new Error('Gestionnaire non trouvé');
+    }
   }
 
-  async getUserByEmail(email: string) {
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        'SELECT u.*, p.role as user_role, p.first_name, p.last_name FROM auth.users u JOIN public.profiles p ON u.id = p.id WHERE u.email = $1',
-        [email]
-      );
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      const user = result.rows[0];
-      return {
-        id: user.id,
-        email: user.email,
-        role: user.user_role,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        password: user.encrypted_password
-      };
-    } finally {
-      client.release();
-    }
+  async getUserByEmail(email: string): Promise<User | null> {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+    return result.rows[0] || null;
   }
 }
 

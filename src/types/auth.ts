@@ -32,10 +32,10 @@ export interface AuthState {
   token: string | null;
   error: string | null;
   loading: boolean;
+  checkAuth: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
   signUp: (email: string, password: string, role: UserRole, firstName: string, lastName: string) => Promise<AuthResponse>;
-  signOut: () => void;
-  checkAuth: () => Promise<void>;
+  signOut: () => Promise<void>;
   setDemoUser: (user: User) => void;
 }
 

@@ -6,16 +6,28 @@ import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { useToast } from '../ui/use-toast'
-import { Trash2, Edit2, X, Plus, User, LogOut, ChevronDown } from 'lucide-react'
+import { Trash2, Edit2, X, Plus, User, LogOut, ChevronDown, Mail } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import { themeConfig } from '../../config/theme.config'
 import { useThemeStore } from '../../store/themeStore'
+import Cookies from 'js-cookie'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu'
 
 interface Manager {
   id: string
   email: string
+  first_name: string
+  last_name: string
   created_at: string
+  is_active: boolean
 }
 
 interface Nanny {
@@ -311,10 +323,10 @@ const TabButton: React.FC<{
 }> = ({ isActive, onClick, children }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${
+    className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-all duration-200 ${
       isActive
-        ? 'bg-white text-blue-600 border-b-2 border-blue-600'
-        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+        ? 'bg-white text-[#4B0082] border-b-2 border-[#4B0082] shadow-sm'
+        : 'text-[#4B0082]/70 hover:text-[#4B0082] hover:bg-[#4B0082]/5'
     }`}
   >
     {children}
@@ -366,6 +378,110 @@ const ThemeButton: React.FC<{
   </button>
 );
 
+const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (email: string, password: string, first_name: string, last_name: string) => Promise<void> }) => {
+  const { toast } = useToast()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [first_name, setFirstName] = useState('')
+  const [last_name, setLastName] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password !== confirmPassword) {
+      toast({
+        title: 'Erreur',
+        description: 'Les mots de passe ne correspondent pas.',
+        variant: 'destructive'
+      })
+      return
+    }
+    await onCreate(email, password, first_name, last_name)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl transform transition-all duration-200">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-semibold text-[#4B0082]">Créer un gestionnaire</h2>
+          <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-[#4B0082]/10 transition-colors duration-200">
+            <X className="h-4 w-4 text-[#4B0082]" />
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <Label htmlFor="managerFirstName" className="text-[#4B0082]">Prénom</Label>
+            <Input
+              id="managerFirstName"
+              type="text"
+              value={first_name}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Prénom"
+              className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="managerLastName" className="text-[#4B0082]">Nom</Label>
+            <Input
+              id="managerLastName"
+              type="text"
+              value={last_name}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Nom"
+              className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="managerEmail" className="text-[#4B0082]">Email</Label>
+            <Input
+              id="managerEmail"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@exemple.com"
+              className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="managerPassword" className="text-[#4B0082]">Mot de passe</Label>
+            <Input
+              id="managerPassword"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="managerConfirmPassword" className="text-[#4B0082]">Confirmer le mot de passe</Label>
+            <Input
+              id="managerConfirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
+              required
+            />
+          </div>
+          <Button 
+            type="submit"
+            className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 w-full text-white"
+          >
+            Créer le gestionnaire
+          </Button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export const AdminDashboard = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -399,7 +515,7 @@ export const AdminDashboard = () => {
       const response = await fetch('http://localhost:3000/api/users/managers', {
         credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         }
       })
       
@@ -425,7 +541,7 @@ export const AdminDashboard = () => {
       const response = await fetch('http://localhost:3000/api/users/nannies', {
         credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         }
       })
       
@@ -449,7 +565,7 @@ export const AdminDashboard = () => {
       const response = await fetch('http://localhost:3000/api/users/parents', {
         credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         }
       })
       
@@ -470,18 +586,20 @@ export const AdminDashboard = () => {
     }
   }
 
-  const createManager = async (email: string, password: string) => {
+  const createManager = async (email: string, password: string, first_name: string, last_name: string) => {
     try {
       const response = await fetch('http://localhost:3000/api/users/managers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         },
         credentials: 'include',
         body: JSON.stringify({
           email,
           password,
+          first_name,
+          last_name,
           role: 'gestionnaire',
           is_active: true
         }),
@@ -508,18 +626,13 @@ export const AdminDashboard = () => {
     }
   }
 
-  const updateManager = async (managerId: string, newEmail: string, newPassword: string) => {
+  const updateManager = async (managerId: string, updates: { email?: string; password?: string; first_name?: string; last_name?: string }) => {
     try {
-      const updates: { email?: string; password?: string } = {}
-      
-      if (newEmail) updates.email = newEmail
-      if (newPassword) updates.password = newPassword
-
       const response = await fetch(`http://localhost:3000/api/users/managers/${managerId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         },
         credentials: 'include',
         body: JSON.stringify(updates),
@@ -550,7 +663,7 @@ export const AdminDashboard = () => {
       const response = await fetch(`http://localhost:3000/api/users/managers/${managerId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         },
         credentials: 'include',
       })
@@ -591,7 +704,7 @@ export const AdminDashboard = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -644,7 +757,7 @@ export const AdminDashboard = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -685,7 +798,7 @@ export const AdminDashboard = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         },
         credentials: 'include',
         body: JSON.stringify(data),
@@ -721,7 +834,7 @@ export const AdminDashboard = () => {
       const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${Cookies.get('auth_token')}`
         },
         credentials: 'include',
       })
@@ -752,25 +865,41 @@ export const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F9FAFB]">
       {/* En-tête */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Tableau de bord administrateur</h1>
-            <button
-              onClick={() => signOut()}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-            >
-              Déconnexion
-            </button>
+            <h1 className="text-2xl font-bold text-[#4B0082]">Tableau de bord administrateur</h1>
+            <div className="flex items-center space-x-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-auto rounded-full flex items-center gap-2">
+                    <User className="h-5 w-5 text-[#4B0082]" />
+                    <span className="text-sm font-medium text-[#4B0082]">{user?.email}</span>
+                    <ChevronDown className="h-4 w-4 text-[#4B0082]" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 shadow-lg" align="end" forceMount>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShowAccountModal(true)} className="text-[#4B0082] hover:bg-[#4B0082]/10">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Mon compte</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut} className="text-[#4B0082] hover:bg-[#4B0082]/10">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Déconnexion</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Navigation par onglets */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="border-b border-gray-200">
+        <div className="border-b border-[#4B0082]/20">
           <nav className="-mb-px flex space-x-8">
             <TabButton
               isActive={activeTab === 'users'}
@@ -790,180 +919,206 @@ export const AdminDashboard = () => {
         {/* Contenu des onglets */}
         <div className="mt-6">
           <TabContent isActive={activeTab === 'users'}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Liste des parents */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Parents</h2>
-                <div className="space-y-4">
-                  <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des parents</h2>
-                      <Button 
-                        onClick={() => {
-                          setCreateUserType('parent')
-                          setShowCreateUserModal(true)
-                        }}
-                        className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Ajouter un parent
-                      </Button>
-                    </div>
-                    {isLoading ? (
-                      <div className="flex justify-center items-center h-32">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <Tabs defaultValue="managers" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="managers" className="text-[#4B0082]">Gestionnaires</TabsTrigger>
+                  <TabsTrigger value="nannies" className="text-[#4B0082]">Nounous</TabsTrigger>
+                  <TabsTrigger value="parents" className="text-[#4B0082]">Parents</TabsTrigger>
+                </TabsList>
+                <TabsContent value="managers" className="mt-6">
+                  <div className="space-y-4">
+                    <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                      <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des gestionnaires</h2>
+                        <Button 
+                          onClick={() => setShowCreateModal(true)}
+                          className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Ajouter un gestionnaire
+                        </Button>
                       </div>
-                    ) : parents.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>Aucun parent n'a été créé.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {parents.map((parent) => (
-                          <div
-                            key={parent.id}
-                            className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
-                            onClick={() => setSelectedUser({ ...parent, type: 'parent' })}
-                          >
-                            <div>
-                              <p className="font-medium text-[#4B0082]">{parent.first_name} {parent.last_name}</p>
-                              <p className="text-sm text-gray-500">{parent.email}</p>
-                              <p className="text-sm text-gray-500">
-                                Créé le {new Date(parent.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="hover:bg-[#4B0082]/10 transition-colors duration-200"
+                      {isLoading ? (
+                        <div className="flex justify-center items-center h-32">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
+                        </div>
+                      ) : managers.length === 0 ? (
+                        <div className="text-center py-8 text-[#4B0082]/70">
+                          <p>Aucun gestionnaire n'a été créé.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {managers.map((manager) => (
+                            <div
+                              key={manager.id}
+                              className="flex items-center justify-between p-4 border rounded-lg hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
                             >
-                              <Edit2 className="h-4 w-4 text-[#4B0082]" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </Card>
-                </div>
-              </div>
-
-              {/* Liste des nounous */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Nounous</h2>
-                <div className="space-y-4">
-                  <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des nounous</h2>
-                      <Button 
-                        onClick={() => {
-                          setCreateUserType('nanny')
-                          setShowCreateUserModal(true)
-                        }}
-                        className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Ajouter une nounou
-                      </Button>
-                    </div>
-                    {isLoading ? (
-                      <div className="flex justify-center items-center h-32">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
-                      </div>
-                    ) : nannies.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>Aucune nounou n'a été créée.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {nannies.map((nanny) => (
-                          <div
-                            key={nanny.id}
-                            className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
-                            onClick={() => setSelectedUser({ ...nanny, type: 'nanny' })}
-                          >
-                            <div>
-                              <p className="font-medium text-[#4B0082]">{nanny.first_name} {nanny.last_name}</p>
-                              <p className="text-sm text-gray-500">{nanny.email}</p>
-                              <p className="text-sm text-gray-500">
-                                Créée le {new Date(nanny.created_at).toLocaleDateString()}
-                              </p>
+                              <div className="flex-grow">
+                                <div className="flex items-center gap-2">
+                                  <User className="h-5 w-5 text-[#4B0082]" />
+                                  <p className="font-medium text-[#4B0082]">
+                                    {manager.first_name} {manager.last_name}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Mail className="h-4 w-4 text-[#4B0082]/70" />
+                                  <p className="text-sm text-[#4B0082]/70">{manager.email}</p>
+                                </div>
+                                <p className="text-xs text-[#4B0082]/60 mt-1">
+                                  Créé le {new Date(manager.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="hover:bg-[#4B0082]/10 transition-colors duration-200"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedManager(manager);
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 text-[#4B0082]" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="hover:bg-red-100 transition-colors duration-200"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce gestionnaire ?')) {
+                                      deleteManager(manager.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="hover:bg-[#4B0082]/10 transition-colors duration-200"
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+                </TabsContent>
+                <TabsContent value="nannies" className="mt-6">
+                  <div className="space-y-4">
+                    <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                      <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des nounous</h2>
+                        <Button 
+                          onClick={() => {
+                            setCreateUserType('nanny')
+                            setShowCreateUserModal(true)
+                          }}
+                          className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Ajouter une nounou
+                        </Button>
+                      </div>
+                      {isLoading ? (
+                        <div className="flex justify-center items-center h-32">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
+                        </div>
+                      ) : nannies.length === 0 ? (
+                        <div className="text-center py-8 text-[#4B0082]/70">
+                          <p>Aucune nounou n'a été créée.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {nannies.map((nanny) => (
+                            <div
+                              key={nanny.id}
+                              className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
+                              onClick={() => setSelectedUser({ ...nanny, type: 'nanny' })}
                             >
-                              <Edit2 className="h-4 w-4 text-[#4B0082]" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </Card>
-                </div>
-              </div>
-
-              {/* Liste des gestionnaires */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Gestionnaires</h2>
-                <div className="space-y-4">
-                  <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des gestionnaires</h2>
-                      <Button 
-                        onClick={() => setShowCreateModal(true)}
-                        className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Ajouter un gestionnaire
-                      </Button>
-                    </div>
-                    {isLoading ? (
-                      <div className="flex justify-center items-center h-32">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
-                      </div>
-                    ) : managers.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>Aucun gestionnaire n'a été créé.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {managers.map((manager) => (
-                          <div
-                            key={manager.id}
-                            className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
-                            onClick={() => setSelectedManager(manager)}
-                          >
-                            <div>
-                              <p className="font-medium text-[#4B0082]">{manager.email}</p>
-                              <p className="text-sm text-gray-500">
-                                Créé le {new Date(manager.created_at).toLocaleDateString()}
-                              </p>
+                              <div>
+                                <p className="font-medium text-[#4B0082]">{nanny.first_name} {nanny.last_name}</p>
+                                <p className="text-sm text-[#4B0082]/70">{nanny.email}</p>
+                                <p className="text-sm text-[#4B0082]/70">
+                                  Créée le {new Date(nanny.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:bg-[#4B0082]/10 transition-colors duration-200"
+                              >
+                                <Edit2 className="h-4 w-4 text-[#4B0082]" />
+                              </Button>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="hover:bg-[#4B0082]/10 transition-colors duration-200"
-                            >
-                              <Edit2 className="h-4 w-4 text-[#4B0082]" />
-                            </Button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+                </TabsContent>
+                <TabsContent value="parents" className="mt-6">
+                  <div className="space-y-4">
+                    <Card className="p-6 border-[#4B0082]/20 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                      <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-semibold text-[#4B0082]">Liste des parents</h2>
+                        <Button 
+                          onClick={() => {
+                            setCreateUserType('parent')
+                            setShowCreateUserModal(true)
+                          }}
+                          className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 text-white"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Ajouter un parent
+                        </Button>
                       </div>
-                    )}
-                  </Card>
-                </div>
-              </div>
+                      {isLoading ? (
+                        <div className="flex justify-center items-center h-32">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
+                        </div>
+                      ) : parents.length === 0 ? (
+                        <div className="text-center py-8 text-[#4B0082]/70">
+                          <p>Aucun parent n'a été créé.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {parents.map((parent) => (
+                            <div
+                              key={parent.id}
+                              className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-[#4B0082]/5 border-[#4B0082]/20 transition-all duration-200 hover:shadow-md"
+                              onClick={() => setSelectedUser({ ...parent, type: 'parent' })}
+                            >
+                              <div>
+                                <p className="font-medium text-[#4B0082]">{parent.first_name} {parent.last_name}</p>
+                                <p className="text-sm text-[#4B0082]/70">{parent.email}</p>
+                                <p className="text-sm text-[#4B0082]/70">
+                                  Créé le {new Date(parent.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:bg-[#4B0082]/10 transition-colors duration-200"
+                              >
+                                <Edit2 className="h-4 w-4 text-[#4B0082]" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </TabContent>
 
           <TabContent isActive={activeTab === 'customization'}>
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Customisation de l'application</h2>
+              <h2 className="text-lg font-semibold text-[#4B0082] mb-4">Customisation de l'application</h2>
               <div className="space-y-6">
                 {/* Sélection du thème */}
                 <div>
-                  <h3 className="text-md font-medium text-gray-900 mb-3">Thème de l'application</h3>
+                  <h3 className="text-md font-medium text-[#4B0082] mb-3">Thème de l'application</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <ThemeButton
                       themeName="Classique"
@@ -1020,7 +1175,7 @@ export const AdminDashboard = () => {
                   id="adminEmail"
                   type="email"
                   value={adminEmail}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdminEmail(e.target.value)}
+                  onChange={(e) => setAdminEmail(e.target.value)}
                   placeholder="email@exemple.com"
                   className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
                 />
@@ -1031,7 +1186,7 @@ export const AdminDashboard = () => {
                   id="adminPassword"
                   type="password"
                   value={adminPassword}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdminPassword(e.target.value)}
+                  onChange={(e) => setAdminPassword(e.target.value)}
                   placeholder="••••••••"
                   className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
                 />
@@ -1042,7 +1197,7 @@ export const AdminDashboard = () => {
                   id="adminNewPassword"
                   type="password"
                   value={adminNewPassword}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdminNewPassword(e.target.value)}
+                  onChange={(e) => setAdminNewPassword(e.target.value)}
                   placeholder="••••••••"
                   className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
                 />
@@ -1053,7 +1208,7 @@ export const AdminDashboard = () => {
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
                 />
@@ -1084,6 +1239,13 @@ export const AdminDashboard = () => {
           type={createUserType}
           onClose={() => setShowCreateUserModal(false)}
           onCreate={createUser}
+        />
+      )}
+
+      {showCreateModal && (
+        <CreateManagerModal
+          onClose={() => setShowCreateModal(false)}
+          onCreate={createManager}
         />
       )}
     </div>

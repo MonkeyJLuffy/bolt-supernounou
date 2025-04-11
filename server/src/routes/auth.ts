@@ -4,9 +4,8 @@ import { pool } from '../db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { userService } from '../services/userService.js';
-import { UserRole } from '../types/user.js';
 import { UserService } from '../services/userService.js';
+import { UserRole } from '../types/user.js';
 import { AuthService } from '../services/authService.js';
 import { validateLoginInput } from '../middleware/validation.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -16,6 +15,15 @@ interface AuthenticatedRequest extends Request {
     id: string;
     role: string;
   };
+}
+
+interface User {
+  id: string;
+  email: string;
+  password_hash: string;
+  role: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 const router = express.Router();
@@ -73,7 +81,7 @@ router.post('/signin', async (req: Request, res: Response) => {
     }
 
     // Vérifier le mot de passe
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
       return res.status(401).json({ message: 'Identifiants invalides' });
     }
@@ -197,7 +205,7 @@ router.post('/verify-admin', authenticate, async (req: AuthenticatedRequest, res
       return res.status(401).json({ message: 'Identifiants invalides' });
     }
 
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
       return res.status(401).json({ message: 'Identifiants invalides' });
     }

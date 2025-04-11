@@ -12,7 +12,7 @@
 ## 2. Administrateur par défaut ✅
 - Compte créé :
   - Email : admin@supernounou.fr
-  - Mot de passe : administrateur
+  - Mot de passe : SuperNounouPassword
 - Dashboard administrateur :
   - [ ] Formulaire de création de gestionnaire (nom, prénom, email)
   - [ ] Formulaire de modification de ses propres identifiants

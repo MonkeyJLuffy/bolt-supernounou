@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { Heart, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthFormProps, UserRole } from '../../types/auth';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -15,25 +15,25 @@ export function AuthForm({ type }: AuthFormProps) {
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<UserRole>('parent');
   const navigate = useNavigate();
-  const { signIn, signUp, error, setDemoUser } = useAuthStore();
+  const location = useLocation();
+  const { signIn, signUp, error, setDemoUser, loading, user } = useAuthStore();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      const from = (location.state as any)?.from?.pathname || '/tableau-de-bord';
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
     try {
       if (type === 'signin') {
-        const result = await signIn(email, password);
-        if (result.user.role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/tableau-de-bord');
-        }
+        await signIn(email, password);
       } else {
         await signUp(email, password, role, firstName, lastName);
-        navigate('/tableau-de-bord');
       }
     } catch (error) {
       toast({
@@ -41,8 +41,6 @@ export function AuthForm({ type }: AuthFormProps) {
         description: error instanceof Error ? error.message : 'Une erreur est survenue',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -180,9 +178,9 @@ export function AuthForm({ type }: AuthFormProps) {
                 <Button
                   type="submit"
                   className="w-full bg-[#7ECBC3] text-white py-2 sm:py-3 rounded-lg hover:bg-[#6BA59E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isLoading}
+                  disabled={loading}
                 >
-                  {isLoading ? 'Chargement...' : type === 'signin' ? 'Se connecter' : 'S\'inscrire'}
+                  {loading ? 'Chargement...' : type === 'signin' ? 'Se connecter' : 'S\'inscrire'}
                 </Button>
 
                 {type === 'signin' && (

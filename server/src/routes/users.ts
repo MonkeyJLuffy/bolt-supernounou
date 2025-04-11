@@ -16,7 +16,7 @@ interface AuthenticatedRequest extends Request {
 router.get('/managers', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, created_at FROM users WHERE role = $1 ORDER BY created_at DESC',
+      'SELECT id, email, first_name, last_name, created_at, is_active FROM users WHERE role = $1 ORDER BY created_at DESC',
       ['gestionnaire']
     );
     res.json(result.rows);
@@ -57,10 +57,12 @@ router.get('/parents', authenticate, authorize('admin'), async (req: Authenticat
 // Route pour créer un gestionnaire
 router.post('/managers', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, first_name, last_name } = req.body;
     const result = await userService.createUser({
       email,
       password,
+      first_name,
+      last_name,
       role: 'gestionnaire'
     });
     res.status(201).json(result);
@@ -74,8 +76,8 @@ router.post('/managers', authenticate, authorize('admin'), async (req: Authentic
 router.put('/managers/:id', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { email, password } = req.body;
-    const result = await userService.updateUser(id, { email, password });
+    const { email, password, first_name, last_name } = req.body;
+    const result = await userService.updateUser(id, { email, password, first_name, last_name });
     res.json(result);
   } catch (error) {
     console.error('Erreur lors de la mise à jour du gestionnaire:', error);
@@ -87,7 +89,7 @@ router.put('/managers/:id', authenticate, authorize('admin'), async (req: Authen
 router.delete('/managers/:id', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    await userService.deleteUser(id);
+    await userService.deleteManager(id);
     res.status(204).send();
   } catch (error) {
     console.error('Erreur lors de la suppression du gestionnaire:', error);

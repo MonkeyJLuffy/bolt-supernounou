@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AuthState, AuthResponse, User, UserRole, mapServerUserToClient } from '../types/auth';
+import Cookies from 'js-cookie';
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -8,6 +9,37 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       error: null,
+      loading: false,
+      checkAuth: async () => {
+        const token = Cookies.get('auth_token');
+        if (!token) {
+          set({ user: null, token: null, loading: false });
+          return;
+        }
+
+        try {
+          set({ loading: true });
+          const response = await fetch('http://localhost:3000/api/auth/verify', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            credentials: 'include',
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const user = mapServerUserToClient(data.user);
+            set({ user, token, loading: false });
+          } else {
+            Cookies.remove('auth_token');
+            set({ user: null, token: null, loading: false });
+          }
+        } catch (error) {
+          Cookies.remove('auth_token');
+          set({ user: null, token: null, loading: false });
+        }
+      },
       signIn: async (email: string, password: string): Promise<AuthResponse> => {
         try {
           set({ loading: true, error: null });
@@ -26,13 +58,13 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(data.message || 'Erreur de connexion');
           }
 
-          // Stocker le token dans le localStorage
-          localStorage.setItem('token', data.token);
-          
-          // Mapper les données du serveur vers notre interface User
           const user = mapServerUserToClient(data.user);
+          Cookies.set('auth_token', data.token, {
+            expires: 1,
+            secure: true,
+            sameSite: 'lax'
+          });
           
-          // Mettre à jour l'état de l'utilisateur
           set({ user, token: data.token, loading: false });
 
           return data;
@@ -66,8 +98,12 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(data.message || 'Erreur lors de l\'inscription');
           }
 
-          // Stocker le token dans le localStorage
-          localStorage.setItem('token', data.token);
+          // Stocker le token dans un cookie
+          Cookies.set('auth_token', data.token, {
+            expires: 1,
+            secure: true,
+            sameSite: 'lax'
+          });
           
           // Mapper les données du serveur vers notre interface User
           const user = mapServerUserToClient(data.user);
@@ -82,46 +118,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      checkAuth: async () => {
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            set({ user: null, token: null, loading: false });
-            return;
-          }
-
-          set({ loading: true });
-          const response = await fetch('http://localhost:3000/api/auth/check-session', {
-            credentials: 'include',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (!response.ok) {
-            localStorage.removeItem('token');
-            set({ user: null, token: null, loading: false });
-            return;
-          }
-
-          const data = await response.json();
-          localStorage.setItem('token', data.token);
-          
-          // Mapper les données du serveur vers notre interface User
-          const user = mapServerUserToClient(data.user);
-          
-          // Mettre à jour l'état de l'utilisateur
-          set({ user, token, loading: false });
-        } catch (error) {
-          localStorage.removeItem('token');
-          set({ user: null, token: null, loading: false });
-        }
-      },
-
       signOut: async () => {
         try {
           set({ loading: true });
-          const token = localStorage.getItem('token');
+          const token = Cookies.get('auth_token');
           if (token) {
             await fetch('http://localhost:3000/api/auth/signout', {
               method: 'POST',
@@ -131,7 +131,7 @@ export const useAuthStore = create<AuthState>()(
               }
             });
           }
-          localStorage.removeItem('token');
+          Cookies.remove('auth_token');
           set({ user: null, token: null, loading: false });
         } catch (error) {
           set({ loading: false });
@@ -145,7 +145,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ token: state.token }),
+      partialize: (state) => ({ 
+        user: state.user
+      })
     }
   )
 );
