@@ -19,6 +19,7 @@ import { Caregiver } from '../../types/caregiver';
 import { DayStatus, DayData } from '../../types/calendar';
 import { Message as MessageType } from '../../types/message';
 import { mockChildService, mockCaregiverService, mockCalendarService, mockMessageService } from '../../services/mockServices';
+import { UserDropdown } from '../ui/UserDropdown';
 
 interface UIMessage {
   id: string;
@@ -29,7 +30,7 @@ interface UIMessage {
 
 export function ParentDashboard() {
   const { user, signOut } = useAuthStore();
-  const { theme } = useThemeStore();
+  const { currentTheme, themes } = useThemeStore();
   const [messageInput, setMessageInput] = useState('');
   const [currentDate] = useState(new Date());
   const [selectionStart, setSelectionStart] = useState<Date | null>(null);
@@ -133,17 +134,17 @@ export function ParentDashboard() {
   const getStatusColor = (status: DayStatus): string => {
     switch (status) {
       case 'conge-am':
-        return `bg-[${theme.colors.warning.main}]`;
+        return `bg-[${themes[currentTheme].colors.warning.main}]`;
       case 'absence-prevue':
-        return `bg-[${theme.colors.warning.light}]`;
+        return `bg-[${themes[currentTheme].colors.warning.light}]`;
       case 'absence-validee':
-        return `bg-[${theme.colors.success.main}] text-white`;
+        return `bg-[${themes[currentTheme].colors.success.main}] text-white`;
       case 'conge-maladie':
-        return `bg-[${theme.colors.error.main}] text-white`;
+        return `bg-[${themes[currentTheme].colors.error.main}] text-white`;
       case 'selected':
-        return `bg-[${theme.colors.primary.main}] text-white`;
+        return `bg-[${themes[currentTheme].colors.primary.main}] text-white`;
       default:
-        return `bg-[${theme.colors.background.default}] hover:bg-[${theme.colors.background.paper}]`;
+        return `bg-[${themes[currentTheme].colors.background.default}] hover:bg-[${themes[currentTheme].colors.background.paper}]`;
     }
   };
 
@@ -369,208 +370,55 @@ export function ParentDashboard() {
   }
 
   return (
-    <div className={`min-h-screen bg-[${theme.colors.background.default}]`}>
-      {/* Navigation */}
-      <div className={`bg-[${theme.colors.background.paper}] shadow`}>
-        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
+    <div className={`min-h-screen bg-[${themes[currentTheme].colors.background.default}]`}>
+      {/* En-tête */}
+      <header className={`bg-[${themes[currentTheme].colors.background.paper}] shadow-sm`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <h1 className={`text-2xl font-bold text-[${theme.colors.primary.main}] mr-12`}>Super Nounou</h1>
-              <div className="flex gap-2">
-                <button className={`bg-[${theme.colors.primary.main}] text-white px-6 py-2 rounded-full font-medium`}>
-                  Mon tableau de bord
-                </button>
-                <button className={`border-2 border-[${theme.colors.primary.light}] text-[${theme.colors.text.primary}] px-6 py-2 rounded-full font-medium hover:bg-[${theme.colors.primary.light}] transition-colors`}>
-                  Trouver une nounou
-                </button>
-                <button className={`border-2 border-[${theme.colors.primary.light}] text-[${theme.colors.text.primary}] px-6 py-2 rounded-full font-medium hover:bg-[${theme.colors.primary.light}] transition-colors`}>
-                  Paramètres
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className={`text-[${theme.colors.text.primary}]`}>
-                {user?.firstName} {user?.lastName}
-              </span>
-              <button
-                onClick={signOut}
-                className={`bg-[${theme.colors.primary.main}] text-white px-4 py-2 rounded-lg hover:bg-[${theme.colors.primary.dark}] transition-colors`}
-              >
-                Se déconnecter
-              </button>
+            <h1 className={`text-2xl font-bold text-[${themes[currentTheme].colors.primary.main}]`}>
+              Tableau de bord Parent
+            </h1>
+            <div className="flex items-center space-x-4">
+              <UserDropdown />
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Main Container */}
-      <div className="flex flex-1 h-[calc(100vh-64px)]">
-        {/* Left Column - Child Profile */}
-        <div className={`w-60 bg-[${theme.colors.background.paper}] border-r border-[${theme.colors.background.default}] p-6 flex flex-col items-center`}>
-          <div className={`w-24 h-24 bg-[${theme.colors.primary.light}] rounded-full flex items-center justify-center mb-4`}>
-            <User className={`w-12 h-12 text-[${theme.colors.primary.main}]`} />
+      {/* Contenu principal */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Carte des enfants */}
+          <div className={`bg-[${themes[currentTheme].colors.background.paper}] rounded-lg shadow p-6`}>
+            <h2 className={`text-xl font-semibold text-[${themes[currentTheme].colors.primary.main}] mb-4`}>
+              Mes Enfants
+            </h2>
+            <p className={`text-[${themes[currentTheme].colors.text.secondary}]`}>
+              Aucun enfant enregistré pour le moment.
+            </p>
           </div>
-          
-          {/* Sélecteur d'enfant */}
-          <div className="relative mb-8">
-            <button 
-              className="flex items-center gap-2 text-lg font-medium"
-              onClick={() => setShowChildSelector(!showChildSelector)}
-            >
-              {activeChild ? activeChild.name : 'Sélectionner un enfant'}
-              <ChevronDown className="w-4 h-4" />
-            </button>
-            
-            {showChildSelector && (
-              <div className="absolute z-10 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
-                {children
-                  .filter(child => child.parentId === user?.id)
-                  .map(child => (
-                    <button
-                      key={child.id}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => handleChildSelect(child)}
-                    >
-                      {child.name} ({child.age} ans)
-                    </button>
-                  ))}
-              </div>
-            )}
+
+          {/* Carte des réservations */}
+          <div className={`bg-[${themes[currentTheme].colors.background.paper}] rounded-lg shadow p-6`}>
+            <h2 className={`text-xl font-semibold text-[${themes[currentTheme].colors.primary.main}] mb-4`}>
+              Mes Réservations
+            </h2>
+            <p className={`text-[${themes[currentTheme].colors.text.secondary}]`}>
+              Aucune réservation en cours.
+            </p>
           </div>
-          
-          <button className="flex items-center gap-2 bg-[#F7EDE2] text-gray-700 px-4 py-2 rounded-full font-medium hover:bg-[#7ECBC3] hover:text-white transition-colors">
-            <Plus className="w-4 h-4" />
-            Ajouter un enfant
-          </button>
-        </div>
 
-        {/* Content Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Caregiver Banner */}
-          {caregiver && (
-            <div className={`bg-[${theme.colors.background.paper}] border-b border-[${theme.colors.background.default}] p-5 flex items-start`}>
-              <div className={`w-24 h-24 bg-[${theme.colors.primary.light}] rounded-xl flex items-center justify-center mr-5`}>
-                <User className={`w-12 h-12 text-[${theme.colors.primary.main}]`} />
-              </div>
-              <div className="flex-1">
-                <h2 className={`text-xl font-semibold mb-3 text-[${theme.colors.text.primary}]`}>{caregiver.firstName} {caregiver.lastName}</h2>
-                <div className="flex items-center gap-4">
-                  <span className={`bg-[${theme.colors.background.default}] px-4 py-2 rounded-lg text-sm text-[${theme.colors.text.secondary}]`}>
-                    Taux horaire : {caregiver.hourlyRate.toFixed(2)} €/h
-                  </span>
-                  <span className={`bg-[${theme.colors.background.default}] px-4 py-2 rounded-lg text-sm text-[${theme.colors.text.secondary}]`}>
-                    Frais journaliers : {caregiver.dailyRate.toFixed(2)} €/jour
-                  </span>
-                  <button className={`bg-[${theme.colors.secondary.light}] text-[${theme.colors.text.primary}] px-4 py-2 rounded-lg font-medium hover:bg-[${theme.colors.secondary.main}] hover:text-white transition-colors`}>
-                    Voir le contrat
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Main Content */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Calendar Section */}
-            <div className={`w-1/3 bg-[${theme.colors.background.paper}] p-5 overflow-y-auto`} ref={calendarRef}>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold">Planning de garde {activeChild ? `pour ${activeChild.name}` : ''}</h3>
-                <div className="text-sm text-gray-500">
-                  {isCtrlPressed ? "Mode sélection multiple (Ctrl)" : "Mode sélection de plage"}
-                </div>
-              </div>
-
-              {/* Calendar Grid */}
-              <div className="space-y-4">
-                {renderCalendar(currentDate)}
-                {renderCalendar(addMonths(currentDate, 1))}
-              </div>
-
-              {/* Legend */}
-              <div className="flex justify-center flex-wrap gap-4 my-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-[#FFD166] rounded"></div>
-                  <span className="text-sm">Congé assistante maternelle</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-[#F4A261] rounded"></div>
-                  <span className="text-sm">Absence prévue de l'enfant</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-[#84A98C] rounded"></div>
-                  <span className="text-sm">Absence validée</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-[#E76F51] rounded"></div>
-                  <span className="text-sm">Congé maladie</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-[#7ECBC3] rounded"></div>
-                  <span className="text-sm">Jours sélectionnés</span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-center gap-4">
-                <button className="bg-[#F7EDE2] text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-[#7ECBC3] hover:text-white transition-colors">
-                  Voir les demandes en attente
-                </button>
-                <button className="bg-[#F7EDE2] text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-[#7ECBC3] hover:text-white transition-colors">
-                  Déclarer une absence
-                </button>
-              </div>
-            </div>
-
-            {/* Messaging Section */}
-            <div className={`w-2/3 bg-[${theme.colors.background.paper}] border-l border-[${theme.colors.background.default}] flex flex-col`}>
-              <div className="p-5 border-b border-gray-100 font-medium">
-                Messagerie {activeChild ? `avec ${activeChild.name}` : ''}
-              </div>
-              <div className="flex-1 p-5 space-y-4 overflow-y-auto">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`${
-                      message.sender === 'parent'
-                        ? 'bg-[#B5E5E0] ml-auto'
-                        : 'bg-gray-50'
-                    } text-gray-700 p-3 rounded-2xl max-w-[80%]`}
-                  >
-                    <div className="text-sm">{message.content}</div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {format(message.timestamp, 'HH:mm')}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Écrivez votre message..."
-                    className="flex-1 px-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#7ECBC3] focus:border-transparent"
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!messageInput.trim()}
-                    className="w-10 h-10 bg-[#7ECBC3] text-white rounded-full flex items-center justify-center hover:bg-[#6BA59E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Send className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-4 border-t border-gray-100">
-                <button className="w-full bg-[#F7EDE2] text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-[#7ECBC3] hover:text-white transition-colors">
-                  Contacter le Relais Petite Enfance
-                </button>
-              </div>
-            </div>
+          {/* Carte des paiements */}
+          <div className={`bg-[${themes[currentTheme].colors.background.paper}] rounded-lg shadow p-6`}>
+            <h2 className={`text-xl font-semibold text-[${themes[currentTheme].colors.primary.main}] mb-4`}>
+              Mes Paiements
+            </h2>
+            <p className={`text-[${themes[currentTheme].colors.text.secondary}]`}>
+              Aucun paiement pour le moment.
+            </p>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -3,6 +3,14 @@ import { persist } from 'zustand/middleware';
 import { AuthState, AuthResponse, User, UserRole, mapServerUserToClient } from '../types/auth';
 import Cookies from 'js-cookie';
 
+interface UpdateProfileData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -125,6 +133,35 @@ export const useAuthStore = create<AuthState>()(
       },
       setDemoUser: (user: User) => {
         set({ user, loading: false, error: null });
+      },
+      updateProfile: async (data: UpdateProfileData) => {
+        set({ loading: true, error: null });
+        try {
+          const token = Cookies.get('auth_token');
+          if (!token) {
+            throw new Error('Non authentifié');
+          }
+
+          const response = await fetch('http://localhost:3000/api/auth/profile', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify(data),
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Échec de la mise à jour du profil');
+          }
+
+          const updatedUser = await response.json();
+          set({ user: mapServerUserToClient(updatedUser), loading: false });
+        } catch (error) {
+          set({ error: error instanceof Error ? error.message : 'Une erreur est survenue', loading: false });
+          throw error;
+        }
       },
     }),
     {

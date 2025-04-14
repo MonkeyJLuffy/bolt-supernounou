@@ -15,8 +15,8 @@ export interface ServerUser {
   id: string;
   email: string;
   role: UserRole;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   createdAt: string;
 }
 
@@ -65,8 +65,11 @@ export function mapServerUserToClient(serverUser: ServerUser): User {
   }
 
   return {
-    ...serverUser,
+    id: serverUser.id,
+    email: serverUser.email,
     role: serverUser.role as UserRole,
+    firstName: serverUser.first_name,
+    lastName: serverUser.last_name,
     createdAt: new Date(serverUser.createdAt),
   };
 }
