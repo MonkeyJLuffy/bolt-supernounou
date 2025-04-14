@@ -59,8 +59,14 @@ export interface SignUpCredentials extends SignInCredentials {
 
 // Fonction utilitaire pour mapper les données serveur vers le client
 export function mapServerUserToClient(serverUser: ServerUser): User {
+  // Vérification du rôle
+  if (!['admin', 'parent', 'nounou', 'gestionnaire'].includes(serverUser.role)) {
+    throw new Error('Rôle invalide');
+  }
+
   return {
     ...serverUser,
+    role: serverUser.role as UserRole,
     createdAt: new Date(serverUser.createdAt),
   };
 }

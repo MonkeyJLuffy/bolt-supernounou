@@ -29,13 +29,19 @@ export const useAuthStore = create<AuthState>()(
 
           if (response.ok) {
             const data = await response.json();
+            console.log('API Response:', data);
             const user = mapServerUserToClient(data.user);
+            console.log('Mapped User:', user);
+            if (!['admin', 'parent', 'nounou', 'gestionnaire'].includes(user.role)) {
+              throw new Error('Rôle invalide');
+            }
             set({ user, token, loading: false });
           } else {
             Cookies.remove('auth_token');
             set({ user: null, token: null, loading: false });
           }
         } catch (error) {
+          console.error('Erreur lors de la vérification de l\'authentification:', error);
           Cookies.remove('auth_token');
           set({ user: null, token: null, loading: false });
         }
@@ -52,72 +58,23 @@ export const useAuthStore = create<AuthState>()(
             body: JSON.stringify({ email, password }),
           });
 
-          const data = await response.json();
-
           if (!response.ok) {
-            throw new Error(data.message || 'Erreur de connexion');
+            throw new Error('Identifiants invalides');
           }
 
+          const data = await response.json();
           const user = mapServerUserToClient(data.user);
-          Cookies.set('auth_token', data.token, {
-            expires: 1,
-            secure: true,
-            sameSite: 'lax'
-          });
-          
-          set({ user, token: data.token, loading: false });
+          const token = data.token;
 
-          return data;
+          Cookies.set('auth_token', token, { expires: 1 });
+          set({ user, token, loading: false, error: null });
+
+          return { user, token };
         } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'Erreur de connexion', loading: false });
+          set({ loading: false, error: error instanceof Error ? error.message : 'Une erreur est survenue' });
           throw error;
         }
       },
-
-      signUp: async (email: string, password: string, role: UserRole, firstName: string, lastName: string): Promise<AuthResponse> => {
-        try {
-          set({ loading: true, error: null });
-          const response = await fetch('http://localhost:3000/api/auth/register', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({ 
-              email, 
-              password, 
-              role,
-              firstName,
-              lastName
-            }),
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.message || 'Erreur lors de l\'inscription');
-          }
-
-          // Stocker le token dans un cookie
-          Cookies.set('auth_token', data.token, {
-            expires: 1,
-            secure: true,
-            sameSite: 'lax'
-          });
-          
-          // Mapper les données du serveur vers notre interface User
-          const user = mapServerUserToClient(data.user);
-          
-          // Mettre à jour l'état de l'utilisateur
-          set({ user, token: data.token, loading: false });
-
-          return data;
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'Erreur lors de l\'inscription', loading: false });
-          throw error;
-        }
-      },
-
       signOut: async () => {
         try {
           set({ loading: true });
@@ -125,29 +82,54 @@ export const useAuthStore = create<AuthState>()(
           if (token) {
             await fetch('http://localhost:3000/api/auth/signout', {
               method: 'POST',
-              credentials: 'include',
               headers: {
-                'Authorization': `Bearer ${token}`
-              }
+                'Authorization': `Bearer ${token}`,
+              },
+              credentials: 'include',
             });
           }
           Cookies.remove('auth_token');
-          set({ user: null, token: null, loading: false });
+          set({ user: null, token: null, loading: false, error: null });
         } catch (error) {
-          set({ loading: false });
+          set({ loading: false, error: error instanceof Error ? error.message : 'Une erreur est survenue' });
+        }
+      },
+      signUp: async (email: string, password: string, role: UserRole, firstName: string, lastName: string): Promise<AuthResponse> => {
+        try {
+          set({ loading: true, error: null });
+          const response = await fetch('http://localhost:3000/api/auth/signup', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ email, password, role, firstName, lastName }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Erreur lors de l\'inscription');
+          }
+
+          const data = await response.json();
+          const user = mapServerUserToClient(data.user);
+          const token = data.token;
+
+          Cookies.set('auth_token', token, { expires: 1 });
+          set({ user, token, loading: false, error: null });
+
+          return { user, token };
+        } catch (error) {
+          set({ loading: false, error: error instanceof Error ? error.message : 'Une erreur est survenue' });
           throw error;
         }
       },
-
       setDemoUser: (user: User) => {
-        set({ user, token: 'demo-token-123', error: null });
+        set({ user, loading: false, error: null });
       },
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ 
-        user: state.user
-      })
+      partialize: (state) => ({ user: state.user, token: state.token }),
     }
   )
 );
