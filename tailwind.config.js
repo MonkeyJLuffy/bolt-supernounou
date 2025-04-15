@@ -1,9 +1,26 @@
 /** @type {import('tailwindcss').Config} */
-export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+module.exports = {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
+        primary: {
+          DEFAULT: '#7ECBC3',
+          light: '#B5E5E0',
+          dark: '#6BA59E',
+        },
+        secondary: {
+          DEFAULT: '#F7EDE2',
+          light: '#F9F5F0',
+          dark: '#E5D5C5',
+        },
+        success: {
+          DEFAULT: '#84A98C',
+          light: '#A7C4BC',
+          dark: '#6B8C7D',
+        },
         pink: {
           50: '#fdf2f8',
           100: '#fce7f3',
@@ -20,4 +37,4 @@ export default {
     },
   },
   plugins: [],
-};
+}
