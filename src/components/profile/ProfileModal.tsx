@@ -37,7 +37,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
       await updateProfile({
         firstName,
         lastName,
-        email,
         currentPassword: currentPassword || undefined,
         newPassword: newPassword || undefined,
       });
@@ -120,7 +119,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Laissez vide pour ne pas changer"
+              className={newPassword && newPassword.length < 8 ? "border-red-500" : ""}
             />
+            <p className={`text-sm ${newPassword && newPassword.length < 8 ? "text-red-500" : "text-gray-500"}`}>
+              Le mot de passe doit contenir au moins 8 caractères
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -131,7 +134,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Laissez vide pour ne pas changer"
+              className={confirmPassword && newPassword !== confirmPassword ? "border-red-500" : ""}
             />
+            {confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-sm text-red-500">Les mots de passe ne correspondent pas</p>
+            )}
           </div>
 
           {error && (

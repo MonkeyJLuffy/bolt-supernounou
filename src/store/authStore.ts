@@ -67,7 +67,8 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (!response.ok) {
-            throw new Error('Identifiants invalides');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Erreur lors de la connexion');
           }
 
           const data = await response.json();
@@ -79,6 +80,7 @@ export const useAuthStore = create<AuthState>()(
 
           return { user, token };
         } catch (error) {
+          console.error('Erreur lors de la connexion:', error);
           set({ loading: false, error: error instanceof Error ? error.message : 'Une erreur est survenue' });
           throw error;
         }
@@ -134,32 +136,54 @@ export const useAuthStore = create<AuthState>()(
       setDemoUser: (user: User) => {
         set({ user, loading: false, error: null });
       },
-      updateProfile: async (data: UpdateProfileData) => {
-        set({ loading: true, error: null });
-        try {
-          const token = Cookies.get('auth_token');
-          if (!token) {
-            throw new Error('Non authentifié');
-          }
+      updateProfile: async (data) => {
+        const token = Cookies.get('auth_token');
+        if (!token) {
+          throw new Error('Non authentifié');
+        }
 
+        if (data.newPassword && data.newPassword.length < 8) {
+          throw new Error('Le mot de passe doit contenir au moins 8 caractères');
+        }
+
+        try {
+          set({ loading: true });
           const response = await fetch('http://localhost:3000/api/auth/profile', {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify(data),
+            credentials: 'include',
+            body: JSON.stringify({
+              first_name: data.firstName,
+              last_name: data.lastName,
+              current_password: data.currentPassword,
+              new_password: data.newPassword,
+              first_login: false,
+            }),
           });
 
           if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Échec de la mise à jour du profil');
+            throw new Error(error.message || 'Erreur lors de la mise à jour du profil');
           }
 
-          const updatedUser = await response.json();
-          set({ user: mapServerUserToClient(updatedUser), loading: false });
+          const userData = await response.json();
+          const updatedUser = mapServerUserToClient(userData.user);
+          
+          // Mettre à jour le token si présent
+          if (userData.token) {
+            Cookies.set('auth_token', userData.token, { expires: 1 });
+            set({ user: updatedUser, token: userData.token, loading: false });
+          } else {
+            set({ user: updatedUser, loading: false });
+          }
+          
+          return updatedUser;
         } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'Une erreur est survenue', loading: false });
+          console.error('Erreur lors de la mise à jour du profil:', error);
+          set({ loading: false });
           throw error;
         }
       },

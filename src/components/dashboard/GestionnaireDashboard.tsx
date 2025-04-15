@@ -2,10 +2,16 @@ import React from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { UserDropdown } from '../ui/UserDropdown';
 import { useThemeStore } from '../../store/themeStore';
+import { FirstLoginSetup } from '../gestionnaire/FirstLoginSetup';
 
 export function GestionnaireDashboard() {
   const { user } = useAuthStore();
   const { currentTheme, themes } = useThemeStore();
+
+  // Si c'est la première connexion, afficher le composant de configuration
+  if (user?.firstLogin) {
+    return <FirstLoginSetup />;
+  }
 
   return (
     <div className={`min-h-screen bg-[${themes[currentTheme].colors.background.default}]`}>

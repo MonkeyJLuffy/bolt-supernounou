@@ -15,10 +15,6 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
   const { user, token } = useAuthStore();
   const location = useLocation();
 
-  console.log('ProtectedRoute - User:', user);
-  console.log('ProtectedRoute - Allowed Roles:', allowedRoles);
-  console.log('ProtectedRoute - User Role:', user?.role);
-
   if (!token) {
     return <Navigate to="/signin" state={{ from: location }} replace />;
   }
@@ -28,7 +24,6 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
   }
 
   if (!allowedRoles.includes(user.role)) {
-    console.log('Access denied - User role not in allowed roles');
     return <Navigate to="/unauthorized" replace />;
   }
 
@@ -75,7 +70,6 @@ function AppRoutes() {
     return <Navigate to="/signin" replace />;
   }
 
-  // Redirection automatique en fonction du rôle
   if (token && user) {
     if (user.role === 'admin' && !location.pathname.startsWith('/admin')) {
       return <Navigate to="/admin" replace />;

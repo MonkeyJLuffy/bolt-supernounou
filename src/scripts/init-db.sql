@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   city VARCHAR(100),
   postal_code VARCHAR(10),
   is_active BOOLEAN DEFAULT true,
+  first_login BOOLEAN DEFAULT CASE WHEN role = 'gestionnaire' THEN true ELSE false END,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT valid_role CHECK (role IN ('admin', 'gestionnaire', 'nounou', 'parent'))

@@ -600,8 +600,7 @@ export const AdminDashboard = () => {
           password,
           first_name,
           last_name,
-          role: 'gestionnaire',
-          is_active: true
+          role: 'gestionnaire'
         }),
       })
 

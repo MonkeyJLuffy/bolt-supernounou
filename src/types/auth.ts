@@ -5,9 +5,10 @@ export interface User {
   id: string;
   email: string;
   role: UserRole;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   createdAt: Date;
+  firstLogin?: boolean;
 }
 
 // Interface pour les données utilisateur côté serveur
@@ -15,9 +16,10 @@ export interface ServerUser {
   id: string;
   email: string;
   role: UserRole;
-  first_name: string;
-  last_name: string;
-  createdAt: string;
+  first_name?: string;
+  last_name?: string;
+  created_at: string;
+  first_login?: boolean;
 }
 
 // Interface pour la réponse d'authentification
@@ -34,9 +36,15 @@ export interface AuthState {
   loading: boolean;
   checkAuth: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
-  signUp: (email: string, password: string, role: UserRole, firstName: string, lastName: string) => Promise<AuthResponse>;
   signOut: () => Promise<void>;
+  signUp: (email: string, password: string, role: UserRole, firstName: string, lastName: string) => Promise<AuthResponse>;
   setDemoUser: (user: User) => void;
+  updateProfile: (data: {
+    firstName: string;
+    lastName: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }) => Promise<User>;
 }
 
 // Interface pour les props du formulaire d'authentification
@@ -70,6 +78,7 @@ export function mapServerUserToClient(serverUser: ServerUser): User {
     role: serverUser.role as UserRole,
     firstName: serverUser.first_name,
     lastName: serverUser.last_name,
-    createdAt: new Date(serverUser.createdAt),
+    createdAt: new Date(serverUser.created_at),
+    firstLogin: serverUser.first_login ?? false,
   };
 }

@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+RÈGLES DE L'APPLICATION :
+- Le champ mot de passe dans la base de données et le code doit toujours être référencé comme 'password' (pas 'password_hash')
+- Cette règle s'applique à toutes les interfaces, requêtes SQL et manipulations de données utilisateur
