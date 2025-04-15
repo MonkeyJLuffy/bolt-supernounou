@@ -1,5 +1,7 @@
+import { pool } from '../db';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { pool } from '../db.js';
+import { User } from '../types/user';
 
 export class AuthService {
   private static readonly JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
@@ -9,7 +11,7 @@ export class AuthService {
     try {
       const decoded = jwt.verify(token, AuthService.JWT_SECRET) as { id: string; role: string };
       const result = await pool.query(
-        'SELECT id, email, role FROM users WHERE id = $1',
+        'SELECT id, email, role, first_name, last_name, created_at, first_login FROM users WHERE id = $1',
         [decoded.id]
       );
       

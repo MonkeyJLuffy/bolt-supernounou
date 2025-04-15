@@ -1,34 +1,39 @@
-import { pool } from '../db.js';
+import { pool } from '../db';
 import bcrypt from 'bcrypt';
 
 async function createAdmin() {
+  const client = await pool.connect();
   try {
+    const email = 'admin@supernounou.fr';
     const password = 'SuperNounouPassword';
-    const passwordHash = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const result = await pool.query(
-      `INSERT INTO users (
-        email, password_hash, role, first_name, last_name,
-        is_active, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-      RETURNING *`,
-      [
-        'admin@supernounou.fr',
-        passwordHash,
-        'admin',
-        'Admin',
-        'System',
-        true
-      ]
+    // Vérifier si l'admin existe déjà
+    const checkResult = await client.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email]
     );
 
-    console.log('Administrateur créé avec succès:');
-    console.log(result.rows[0]);
+    if (checkResult.rows.length > 0) {
+      console.log('Le compte admin existe déjà');
+      return;
+    }
+
+    // Créer le compte admin
+    await client.query(
+      `INSERT INTO users (email, password, first_name, last_name, role, first_login)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [email, hashedPassword, 'Admin', 'SuperNounou', 'admin', true]
+    );
+
+    console.log('Compte admin créé avec succès');
+    console.log('Email:', email);
+    console.log('Mot de passe:', password);
   } catch (error) {
-    console.error('Erreur lors de la création de l\'administrateur:', error);
+    console.error('Erreur lors de la création du compte admin:', error);
   } finally {
-    await pool.end();
+    client.release();
   }
 }
 
-createAdmin(); 
+createAdmin().catch(console.error); 

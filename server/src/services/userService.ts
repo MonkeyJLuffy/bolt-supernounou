@@ -1,8 +1,8 @@
-import { pool } from '../db.js';
+import { pool } from '../db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { User, UserCreateInput, UserUpdateInput, UserLoginInput, UserLoginResponse } from '../types/user.js';
-import { UserRole } from '../types/user.js';
+import { User, UserCreateInput, UserUpdateInput, UserLoginInput, UserLoginResponse } from '../types/user';
+import { UserRole } from '../types/user';
 
 export class UserService {
   private static readonly SALT_ROUNDS = 10;
@@ -10,30 +10,32 @@ export class UserService {
   private static readonly JWT_EXPIRES_IN = '24h';
 
   async createUser(input: UserCreateInput): Promise<User> {
+    console.log('Création d\'utilisateur avec les données:', input);
     const passwordHash = await bcrypt.hash(input.password, UserService.SALT_ROUNDS);
 
-    const result = await pool.query(
-      `INSERT INTO users (
-        email, password_hash, role, first_name, last_name,
-        phone, address, city, postal_code, is_active,
-        created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-      RETURNING *`,
-      [
-        input.email,
-        passwordHash,
-        input.role,
-        input.first_name || null,
-        input.last_name || null,
-        input.phone || null,
-        input.address || null,
-        input.city || null,
-        input.postal_code || null,
-        true
-      ]
-    );
-
-    return result.rows[0];
+    try {
+      const result = await pool.query(
+        `INSERT INTO users (
+          email, password, role, first_name, last_name,
+          is_active, first_login, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING *`,
+        [
+          input.email,
+          passwordHash,
+          input.role,
+          input.first_name || null,
+          input.last_name || null,
+          true,
+          input.role === 'gestionnaire' // Les gestionnaires commencent avec first_login = true
+        ]
+      );
+      console.log('Utilisateur créé avec succès:', result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Erreur lors de la création de l\'utilisateur:', error);
+      throw error;
+    }
   }
 
   async login(input: UserLoginInput): Promise<UserLoginResponse> {
@@ -47,7 +49,7 @@ export class UserService {
       throw new Error('Email ou mot de passe incorrect');
     }
     
-    const validPassword = await bcrypt.compare(input.password, user.password_hash);
+    const validPassword = await bcrypt.compare(input.password, user.password);
     
     if (!validPassword) {
       throw new Error('Email ou mot de passe incorrect');
@@ -59,7 +61,7 @@ export class UserService {
       { expiresIn: UserService.JWT_EXPIRES_IN }
     );
 
-    const { password_hash, ...userWithoutPassword } = user;
+    const { password, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, token };
   }
 
@@ -69,6 +71,9 @@ export class UserService {
   }
 
   async updateUser(id: string, input: UserUpdateInput): Promise<User> {
+    console.log('Début de la mise à jour de l\'utilisateur:', id);
+    console.log('Données de mise à jour reçues:', input);
+    
     const updates: string[] = [];
     const values: any[] = [];
     let paramCount = 1;
@@ -81,7 +86,7 @@ export class UserService {
     }
     if (input.password) {
       const passwordHash = await bcrypt.hash(input.password, UserService.SALT_ROUNDS);
-      updates.push(`password_hash = $${paramCount}`);
+      updates.push(`password = $${paramCount}`);
       values.push(passwordHash);
       paramCount++;
     }
@@ -125,26 +130,35 @@ export class UserService {
       values.push(input.is_active);
       paramCount++;
     }
+    if (input.first_login !== undefined) {
+      console.log('Mise à jour du flag first_login:', input.first_login);
+      updates.push(`first_login = $${paramCount}`);
+      values.push(input.first_login);
+      paramCount++;
+    }
 
+    // Toujours mettre à jour updated_at
     updates.push(`updated_at = NOW()`);
 
-    if (updates.length === 0) {
+    if (updates.length === 1) { // Seulement updated_at a été ajouté
+      console.log('Aucune donnée à mettre à jour pour l\'utilisateur:', id);
       throw new Error('Aucune donnée à mettre à jour');
     }
 
-    values.push(id);
     const query = `
       UPDATE users
       SET ${updates.join(', ')}
       WHERE id = $${paramCount}
       RETURNING *
     `;
+    values.push(id);
+
+    console.log('Requête SQL générée:', query);
+    console.log('Paramètres:', values);
 
     const result = await pool.query(query, values);
-    if (result.rows.length === 0) {
-      throw new Error('Utilisateur non trouvé');
-    }
-
+    console.log('Mise à jour effectuée avec succès:', result.rows[0]);
+    
     return result.rows[0];
   }
 
@@ -210,15 +224,15 @@ export class UserService {
   }
 
   async createManager(data: { email: string; password: string; first_name: string; last_name: string }) {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const passwordHash = await bcrypt.hash(data.password, UserService.SALT_ROUNDS);
     const result = await pool.query(
-      'INSERT INTO users (email, password_hash, role, first_name, last_name) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, role, first_name, last_name, created_at',
-      [data.email, hashedPassword, 'gestionnaire', data.first_name, data.last_name]
+      'INSERT INTO users (email, password, role, first_name, last_name, first_login) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, role, first_name, last_name, created_at, first_login',
+      [data.email, passwordHash, 'gestionnaire', data.first_name, data.last_name, true]
     );
     return result.rows[0];
   }
 
-  async updateManager(id: string, data: { email?: string; password?: string }) {
+  async updateManager(id: string, data: { email?: string; password?: string; first_login?: boolean }) {
     const updates: string[] = [];
     const values: any[] = [];
     let paramCount = 1;
@@ -231,8 +245,14 @@ export class UserService {
 
     if (data.password) {
       const hashedPassword = await bcrypt.hash(data.password, 10);
-      updates.push(`password_hash = $${paramCount}`);
+      updates.push(`password = $${paramCount}`);
       values.push(hashedPassword);
+      paramCount++;
+    }
+
+    if (data.first_login !== undefined) {
+      updates.push(`first_login = $${paramCount}`);
+      values.push(data.first_login);
       paramCount++;
     }
 
@@ -242,7 +262,7 @@ export class UserService {
 
     values.push(id);
     const result = await pool.query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, email, role, created_at`,
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, email, role, created_at, first_login`,
       values
     );
     return result.rows[0];
@@ -261,10 +281,19 @@ export class UserService {
 
   async getUserByEmail(email: string): Promise<User | null> {
     const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
+      'SELECT * FROM users WHERE email = $1 AND is_active = true',
       [email]
     );
     return result.rows[0] || null;
+  }
+
+  async updatePassword(userId: string, newPassword: string): Promise<void> {
+    const passwordHash = await bcrypt.hash(newPassword, UserService.SALT_ROUNDS);
+    
+    await pool.query(
+      'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
+      [passwordHash, userId]
+    );
   }
 }
 

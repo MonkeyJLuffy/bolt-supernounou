@@ -1,16 +1,10 @@
 import express, { Request, Response } from 'express';
-import { pool } from '../db.js';
-import { authenticate, authorize } from '../middleware/auth.js';
-import { userService } from '../services/userService.js';
+import { pool } from '../db';
+import { authenticate, authorize } from '../middleware/auth';
+import { userService } from '../services/userService';
+import { AuthenticatedRequest } from '../types/user';
 
 const router = express.Router();
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    role: string;
-  };
-}
 
 // Route pour récupérer la liste des gestionnaires
 router.get('/managers', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res: Response) => {

@@ -1,9 +1,8 @@
-import pkg from 'pg';
-const { Pool } = pkg;
-import dotenv from 'dotenv';
+import { Pool } from 'pg';
+import { config } from 'dotenv';
 
 // Charger les variables d'environnement
-dotenv.config();
+config();
 
 // Interface pour la configuration de la base de données
 interface DatabaseConfig {
@@ -39,12 +38,11 @@ if (missingEnvVars.length > 0) {
 }
 
 // Créer le pool de connexions
-const pool = new Pool(dbConfig);
+export const pool = new Pool(dbConfig);
 
 // Gérer les erreurs du pool
 pool.on('error', (err) => {
   console.error('Erreur inattendue du pool de connexions:', err.message);
 });
 
-export { pool };
 export type { DatabaseConfig }; 

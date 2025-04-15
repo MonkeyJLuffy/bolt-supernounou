@@ -2,9 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from 'dotenv';
-import { pool } from './db.js';
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
+import { pool } from './db';
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
 
 // Charger les variables d'environnement
 config();
@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN,
   credentials: true
 }));
 app.use(express.json());

@@ -1,14 +1,14 @@
 import express, { Request, Response, Router } from 'express';
 import { z } from 'zod';
-import { pool } from '../db.js';
+import { pool } from '../db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { authenticate, authorize } from '../middleware/auth.js';
-import { UserService } from '../services/userService.js';
-import { UserRole } from '../types/user.js';
-import { AuthService } from '../services/authService.js';
-import { validateLoginInput } from '../middleware/validation.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth';
+import { UserService } from '../services/userService';
+import { UserRole } from '../types/user';
+import { AuthService } from '../services/authService';
+import { validateLoginInput } from '../middleware/validation';
+import { authenticateToken } from '../middleware/auth';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -21,7 +21,7 @@ interface AuthenticatedRequest extends Request {
 interface User {
   id: string;
   email: string;
-  password_hash: string;
+  password: string;
   role: string;
   first_name?: string;
   last_name?: string;
@@ -82,7 +82,7 @@ router.post('/signin', async (req: Request, res: Response) => {
     }
 
     // Vérifier le mot de passe
-    const validPassword = await bcrypt.compare(password, user.password_hash);
+    const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ message: 'Identifiants invalides' });
     }
@@ -112,6 +112,15 @@ router.post('/signin', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Erreur de connexion:', error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: 'Données invalides', 
+        errors: error.errors.map(err => ({
+          path: err.path.join('.'),
+          message: err.message
+        }))
+      });
+    }
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });
@@ -127,7 +136,7 @@ router.get('/check-session', authenticate, async (req: Request, res: Response) =
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
-    const { password_hash, ...userWithoutPassword } = user;
+    const { password, ...userWithoutPassword } = user;
     res.json({ user: userWithoutPassword });
   } catch (error) {
     console.error('Erreur de vérification de session:', error);
@@ -153,7 +162,7 @@ router.get('/profile', authenticate, async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
 
-    const { password_hash, ...userWithoutPassword } = user;
+    const { password, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
   } catch (error) {
     console.error('Erreur lors de la récupération du profil:', error);
@@ -167,12 +176,57 @@ router.put('/profile', authenticate, async (req: Request, res: Response) => {
     if (!authReq.user) {
       return res.status(401).json({ message: 'Non authentifié' });
     }
-    const user = await userService.updateUser(authReq.user.id, req.body);
-    const { password_hash, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+    
+    const { current_password, new_password, ...profileData } = req.body;
+    
+    // Si un nouveau mot de passe est fourni, vérifier que l'ancien est aussi fourni
+    if (new_password && !current_password) {
+      return res.status(400).json({ message: 'Le mot de passe actuel est requis pour changer de mot de passe' });
+    }
+
+    // Vérifier la longueur du nouveau mot de passe
+    if (new_password && new_password.length < 8) {
+      return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères' });
+    }
+
+    // Si un mot de passe est fourni, vérifier qu'il est valide
+    if (current_password) {
+      const user = await userService.getUserById(authReq.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'Utilisateur non trouvé' });
+      }
+
+      const validPassword = await bcrypt.compare(current_password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ message: 'Mot de passe actuel incorrect' });
+      }
+    }
+    
+    const user = await userService.updateUser(authReq.user.id, {
+      ...profileData,
+      ...(new_password && { password: new_password })
+    });
+    
+    // Générer un nouveau token
+    const token = jwt.sign(
+      { 
+        id: user.id,
+        email: user.email,
+        role: user.role
+      },
+      process.env.JWT_SECRET || 'default_secret',
+      { expiresIn: '24h' }
+    );
+
+    const { password, ...userWithoutPassword } = user;
+    res.json({ user: userWithoutPassword, token });
   } catch (error) {
     console.error('Erreur lors de la mise à jour du profil:', error);
-    res.status(400).json({ message: 'Erreur lors de la mise à jour du profil' });
+    if (error instanceof Error) {
+      res.status(400).json({ message: error.message });
+    } else {
+      res.status(400).json({ message: 'Erreur lors de la mise à jour du profil' });
+    }
   }
 });
 
@@ -223,7 +277,7 @@ router.post('/verify-admin', authenticate, async (req: Request, res: Response) =
       return res.status(401).json({ message: 'Identifiants invalides' });
     }
 
-    const validPassword = await bcrypt.compare(password, user.password_hash);
+    const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ message: 'Identifiants invalides' });
     }
@@ -254,18 +308,23 @@ router.post('/change-password', authenticate, async (req: Request, res: Response
 });
 
 // Route pour récupérer les informations de l'utilisateur connecté
-router.get('/me', authenticate, async (req: Request, res: Response) => {
+router.get('/me', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    if (!authReq.user) {
+    const userId = (req as AuthenticatedRequest).user?.id;
+    if (!userId) {
       return res.status(401).json({ message: 'Non authentifié' });
     }
-    const user = await userService.getUserById(authReq.user.id);
-    if (!user) {
+
+    const result = await pool.query(
+      'SELECT id, email, role, first_name, last_name, created_at, first_login FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
-    const { password_hash, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+
+    res.json(result.rows[0]);
   } catch (error) {
     console.error('Erreur lors de la récupération des informations utilisateur:', error);
     res.status(500).json({ message: 'Erreur serveur' });

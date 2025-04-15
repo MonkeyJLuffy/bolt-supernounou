@@ -1,14 +1,6 @@
 import { Request, Response } from 'express';
-import { userService } from '../services/userService.js';
-import { UserRole } from '../types/user.js';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-    role: UserRole;
-  };
-}
+import { userService } from '../services/userService';
+import { UserRole, AuthenticatedRequest } from '../types/user';
 
 export const userController = {
   async register(req: Request, res: Response) {
@@ -38,7 +30,7 @@ export const userController = {
         return res.status(401).json({ message: 'Non authentifié' });
       }
 
-      const user = await userService.getUserById(req.user.userId);
+      const user = await userService.getUserById(req.user.id);
       if (!user) {
         return res.status(404).json({ message: 'Utilisateur non trouvé' });
       }
@@ -57,7 +49,7 @@ export const userController = {
         return res.status(401).json({ message: 'Non authentifié' });
       }
 
-      const user = await userService.updateUser(req.user.userId, req.body);
+      const user = await userService.updateUser(req.user.id, req.body);
       const { password_hash, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {

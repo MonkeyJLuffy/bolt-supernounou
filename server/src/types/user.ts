@@ -1,15 +1,15 @@
 import { Request } from 'express';
 
-export type UserRole = 'admin' | 'gestionnaire' | 'parent' | 'nounou';
+export type UserRole = 'admin' | 'gestionnaire' | 'nounou' | 'parent';
 
 export interface User {
   id: string;
   email: string;
+  password: string;
   role: UserRole;
   first_name?: string;
   last_name?: string;
   first_login?: boolean;
-  password_hash?: string;
   created_at: Date;
   updated_at: Date;
   phone?: string;
@@ -42,6 +42,7 @@ export interface UserUpdateInput {
   city?: string;
   postal_code?: string;
   is_active?: boolean;
+  first_login?: boolean;
 }
 
 export interface UserLoginInput {
@@ -50,7 +51,7 @@ export interface UserLoginInput {
 }
 
 export interface UserLoginResponse {
-  user: Omit<User, 'password_hash'>;
+  user: Omit<User, 'password'>;
   token: string;
 }
 
