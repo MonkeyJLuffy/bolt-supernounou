@@ -385,9 +385,11 @@ const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCrea
   const [confirmPassword, setConfirmPassword] = useState('')
   const [first_name, setFirstName] = useState('')
   const [last_name, setLastName] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
     if (password !== confirmPassword) {
       toast({
         title: 'Erreur',
@@ -396,7 +398,26 @@ const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCrea
       })
       return
     }
-    await onCreate(email, password, first_name, last_name)
+
+    setIsSubmitting(true)
+    try {
+      await onCreate(email, password, first_name, last_name)
+      // Réinitialiser les champs après une création réussie
+      setEmail('')
+      setPassword('')
+      setConfirmPassword('')
+      setFirstName('')
+      setLastName('')
+      onClose() // Fermer le modal
+    } catch (error) {
+      toast({
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la création du gestionnaire.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -420,6 +441,7 @@ const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCrea
               placeholder="Prénom"
               className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -432,6 +454,7 @@ const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCrea
               placeholder="Nom"
               className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -444,6 +467,7 @@ const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCrea
               placeholder="email@exemple.com"
               className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -456,6 +480,7 @@ const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCrea
               placeholder="••••••••"
               className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -468,13 +493,15 @@ const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCrea
               placeholder="••••••••"
               className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
               required
+              disabled={isSubmitting}
             />
           </div>
           <Button 
             type="submit"
             className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 w-full text-white"
+            disabled={isSubmitting}
           >
-            Créer le gestionnaire
+            {isSubmitting ? 'Création en cours...' : 'Créer le gestionnaire'}
           </Button>
         </form>
       </div>
