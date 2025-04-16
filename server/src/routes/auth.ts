@@ -177,29 +177,11 @@ router.put('/profile', authenticate, async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Non authentifié' });
     }
     
-    const { current_password, new_password, ...profileData } = req.body;
+    const { new_password, ...profileData } = req.body;
     
-    // Si un nouveau mot de passe est fourni, vérifier que l'ancien est aussi fourni
-    if (new_password && !current_password) {
-      return res.status(400).json({ message: 'Le mot de passe actuel est requis pour changer de mot de passe' });
-    }
-
     // Vérifier la longueur du nouveau mot de passe
     if (new_password && new_password.length < 8) {
       return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères' });
-    }
-
-    // Si un mot de passe est fourni, vérifier qu'il est valide
-    if (current_password) {
-      const user = await userService.getUserById(authReq.user.id);
-      if (!user) {
-        return res.status(404).json({ message: 'Utilisateur non trouvé' });
-      }
-
-      const validPassword = await bcrypt.compare(current_password, user.password);
-      if (!validPassword) {
-        return res.status(401).json({ message: 'Mot de passe actuel incorrect' });
-      }
     }
     
     const user = await userService.updateUser(authReq.user.id, {
