@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -14,18 +14,26 @@ export function FirstLoginSetup() {
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
-    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Validation en temps réel
   const isNewPasswordValid = formData.newPassword.length >= 8;
   const doPasswordsMatch = formData.newPassword === formData.confirmPassword;
-  const isFormValid = isNewPasswordValid && doPasswordsMatch;
+  const isFormValid = isNewPasswordValid && doPasswordsMatch && !isSubmitting;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleInputChange = useCallback((field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
 
     if (formData.newPassword !== formData.confirmPassword) {
       toast({
@@ -33,34 +41,58 @@ export function FirstLoginSetup() {
         description: 'Les mots de passe ne correspondent pas',
         variant: 'destructive',
       });
+      setIsSubmitting(false);
       return;
     }
 
     try {
-      await updateProfile({
+      const response = await updateProfile({
         firstName: formData.firstName,
         lastName: formData.lastName,
-        currentPassword: formData.currentPassword,
         newPassword: formData.newPassword,
       });
 
-      toast({
-        title: 'Succès',
-        description: 'Votre profil a été mis à jour avec succès',
-      });
+      if (response) {
+        toast({
+          title: 'Succès',
+          description: 'Votre profil a été mis à jour avec succès',
+        });
 
-      // Redirection vers le dashboard après une courte pause
-      setTimeout(() => {
-        navigate('/gestionnaire/dashboard');
-      }, 1000);
+        setTimeout(() => {
+          navigate('/gestionnaire/dashboard');
+        }, 1000);
+      }
     } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      });
+      console.error('Erreur lors de la mise à jour du profil:', error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Non authentifié')) {
+          toast({
+            title: 'Erreur d\'authentification',
+            description: 'Votre session a expiré. Veuillez vous reconnecter.',
+            variant: 'destructive',
+          });
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        } else {
+          toast({
+            title: 'Erreur',
+            description: error.message || 'Une erreur est survenue lors de la mise à jour du profil',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Erreur',
+          description: 'Une erreur inattendue est survenue',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }, [formData, isSubmitting, navigate, toast, updateProfile]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -91,7 +123,7 @@ export function FirstLoginSetup() {
         {/* Right Column - Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
           <Card className="w-full max-w-md p-6 sm:p-8">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
                   Prénom
@@ -99,9 +131,10 @@ export function FirstLoginSetup() {
                 <Input
                   id="firstName"
                   value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  onChange={(e) => handleInputChange('firstName', e.target.value)}
                   className="w-full"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -112,23 +145,10 @@ export function FirstLoginSetup() {
                 <Input
                   id="lastName"
                   value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  onChange={(e) => handleInputChange('lastName', e.target.value)}
                   className="w-full"
                   required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Mot de passe actuel
-                </label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  value={formData.currentPassword}
-                  onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-                  className="w-full"
-                  required
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -140,9 +160,10 @@ export function FirstLoginSetup() {
                   id="newPassword"
                   type="password"
                   value={formData.newPassword}
-                  onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                  className={`w-full ${formData.newPassword && !isNewPasswordValid ? 'border-red-500' : ''}`}
+                  onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                  className={`w-full ${!isNewPasswordValid && formData.newPassword ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
                   required
+                  disabled={isSubmitting}
                 />
                 {formData.newPassword && (
                   <p className={`text-sm mt-1 ${isNewPasswordValid ? 'text-green-600' : 'text-red-500'}`}>
@@ -155,15 +176,16 @@ export function FirstLoginSetup() {
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirmer le nouveau mot de passe
+                  Confirmer le mot de passe
                 </label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className={`w-full ${formData.confirmPassword && !doPasswordsMatch ? 'border-red-500' : ''}`}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  className={`w-full ${!doPasswordsMatch && formData.confirmPassword ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}`}
                   required
+                  disabled={isSubmitting}
                 />
                 {formData.confirmPassword && (
                   <p className={`text-sm mt-1 ${doPasswordsMatch ? 'text-green-600' : 'text-red-500'}`}>
@@ -174,12 +196,12 @@ export function FirstLoginSetup() {
                 )}
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full bg-[#7ECBC3] hover:bg-[#6BA59E]"
+              <Button
+                type="submit"
+                className="w-full bg-[#7ECBC3] hover:bg-[#6BA59E] text-white"
                 disabled={!isFormValid}
               >
-                Enregistrer
+                {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
               </Button>
             </form>
           </Card>
