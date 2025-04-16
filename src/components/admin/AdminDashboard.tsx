@@ -20,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
+import { usePasswordValidation } from '../../hooks/usePasswordValidation'
 
 interface Manager {
   id: string
@@ -381,19 +382,31 @@ const ThemeButton: React.FC<{
 const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (email: string, password: string, first_name: string, last_name: string) => Promise<void> }) => {
   const { toast } = useToast()
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [first_name, setFirstName] = useState('')
   const [last_name, setLastName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const {
+    password,
+    confirmPassword,
+    isPasswordValid,
+    doPasswordsMatch,
+    setPassword,
+    setConfirmPassword,
+    passwordFeedback,
+    confirmPasswordFeedback,
+    getInputClassName
+  } = usePasswordValidation('', '', '#4B0082');
+
+  const isFormValid = isPasswordValid && doPasswordsMatch && email && first_name && last_name && !isSubmitting;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (password !== confirmPassword) {
+    if (!isFormValid) {
       toast({
         title: 'Erreur',
-        description: 'Les mots de passe ne correspondent pas.',
+        description: 'Veuillez remplir tous les champs correctement.',
         variant: 'destructive'
       })
       return
@@ -478,10 +491,15 @@ const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCrea
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
+              className={getInputClassName(passwordFeedback.isValid)}
               required
               disabled={isSubmitting}
             />
+            {password && (
+              <p className={`text-sm mt-1 ${passwordFeedback.isValid ? 'text-green-600' : 'text-red-500'}`}>
+                {passwordFeedback.message}
+              </p>
+            )}
           </div>
           <div>
             <Label htmlFor="managerConfirmPassword" className="text-[#4B0082]">Confirmer le mot de passe</Label>
@@ -491,15 +509,20 @@ const CreateManagerModal = ({ onClose, onCreate }: { onClose: () => void; onCrea
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
-              className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
+              className={getInputClassName(confirmPasswordFeedback.isValid)}
               required
               disabled={isSubmitting}
             />
+            {confirmPassword && (
+              <p className={`text-sm mt-1 ${confirmPasswordFeedback.isValid ? 'text-green-600' : 'text-red-500'}`}>
+                {confirmPasswordFeedback.message}
+              </p>
+            )}
           </div>
           <Button 
             type="submit"
             className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 w-full text-white"
-            disabled={isSubmitting}
+            disabled={!isFormValid}
           >
             {isSubmitting ? 'Création en cours...' : 'Créer le gestionnaire'}
           </Button>
