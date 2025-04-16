@@ -5,6 +5,8 @@ import { Label } from '../ui/label';
 import { X } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useToast } from '../ui/use-toast';
+import { usePasswordValidation } from '../../hooks/usePasswordValidation';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -18,10 +20,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    password: newPassword,
+    confirmPassword,
+    isPasswordValid,
+    doPasswordsMatch,
+    setPassword: setNewPassword,
+    setConfirmPassword,
+    passwordFeedback,
+    confirmPasswordFeedback,
+    getInputClassName
+  } = usePasswordValidation('', '', themes[currentTheme].colors.primary.main);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +41,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     setError(null);
 
     try {
-      if (newPassword && newPassword !== confirmPassword) {
+      if (newPassword && !isPasswordValid) {
+        setError('Le mot de passe doit contenir au moins 8 caractères');
+        return;
+      }
+
+      if (newPassword && !doPasswordsMatch) {
         setError('Les mots de passe ne correspondent pas');
         return;
       }
@@ -43,7 +60,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
       onClose();
     } catch (err) {
-      setError('Une erreur est survenue lors de la mise à jour du profil');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Une erreur est survenue lors de la mise à jour du profil');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -51,20 +72,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
   if (!isOpen) return null;
 
+  const themeColor = themes[currentTheme].colors.primary.main;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
       <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl transform transition-all duration-200">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold" style={{ color: themes[currentTheme].colors.primary.main }}>
+          <h2 className="text-2xl font-semibold" style={{ color: themeColor }}>
             Modifier mon compte
           </h2>
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={onClose}
-            className="hover:bg-[${themes[currentTheme].colors.primary.main}]/10"
+            className={`hover:bg-[${themeColor}]/10`}
           >
-            <X className="h-4 w-4" style={{ color: themes[currentTheme].colors.primary.main }} />
+            <X className="h-4 w-4" style={{ color: themeColor }} />
           </Button>
         </div>
 
@@ -119,11 +142,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Laissez vide pour ne pas changer"
-              className={newPassword && newPassword.length < 8 ? "border-red-500" : ""}
+              className={newPassword ? getInputClassName(passwordFeedback.isValid) : ''}
             />
-            <p className={`text-sm ${newPassword && newPassword.length < 8 ? "text-red-500" : "text-gray-500"}`}>
-              Le mot de passe doit contenir au moins 8 caractères
-            </p>
+            {newPassword && (
+              <p className={`text-sm mt-1 ${passwordFeedback.isValid ? 'text-green-600' : 'text-red-500'}`}>
+                {passwordFeedback.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -134,10 +159,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Laissez vide pour ne pas changer"
-              className={confirmPassword && newPassword !== confirmPassword ? "border-red-500" : ""}
+              className={confirmPassword ? getInputClassName(confirmPasswordFeedback.isValid) : ''}
             />
-            {confirmPassword && newPassword !== confirmPassword && (
-              <p className="text-sm text-red-500">Les mots de passe ne correspondent pas</p>
+            {confirmPassword && (
+              <p className={`text-sm mt-1 ${confirmPasswordFeedback.isValid ? 'text-green-600' : 'text-red-500'}`}>
+                {confirmPasswordFeedback.message}
+              </p>
             )}
           </div>
 
@@ -150,15 +177,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               type="button"
               variant="outline"
               onClick={onClose}
-              className="hover:bg-[${themes[currentTheme].colors.primary.main}]/10"
+              className={`hover:bg-[${themeColor}]/10`}
             >
               Annuler
             </Button>
             <Button
               type="submit"
               disabled={isLoading}
-              style={{ backgroundColor: themes[currentTheme].colors.primary.main }}
-              className="text-white hover:bg-[${themes[currentTheme].colors.primary.main}]/90"
+              style={{ backgroundColor: themeColor }}
+              className={`text-white hover:bg-[${themeColor}]/90`}
             >
               {isLoading ? 'Enregistrement...' : 'Enregistrer'}
             </Button>

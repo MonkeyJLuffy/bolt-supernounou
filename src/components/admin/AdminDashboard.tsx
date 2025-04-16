@@ -547,12 +547,25 @@ export const AdminDashboard = () => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showAccountModal, setShowAccountModal] = useState(false)
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [selectedUser, setSelectedUser] = useState<Nanny | Parent | null>(null)
   const [showCreateUserModal, setShowCreateUserModal] = useState(false)
   const [createUserType, setCreateUserType] = useState<'nanny' | 'parent'>('nanny')
   const [activeTab, setActiveTab] = useState<'users' | 'customization'>('users')
   const { currentTheme, setTheme, themes } = useThemeStore()
+
+  const {
+    password: newPassword,
+    confirmPassword: confirmNewPassword,
+    isPasswordValid,
+    doPasswordsMatch,
+    setPassword: setNewPassword,
+    setConfirmPassword: setNewConfirmPassword,
+    passwordFeedback,
+    confirmPasswordFeedback,
+    getInputClassName
+  } = usePasswordValidation('', '', '#4B0082');
+
+  const isFormValid = (!adminNewPassword || (isPasswordValid && doPasswordsMatch)) && adminEmail && adminPassword;
 
   useEffect(() => {
     fetchManagers()
@@ -739,7 +752,16 @@ export const AdminDashboard = () => {
   }
 
   const updateAdminCredentials = async () => {
-    if (adminNewPassword !== confirmPassword) {
+    if (adminNewPassword && !isPasswordValid) {
+      toast({
+        title: 'Erreur',
+        description: 'Le mot de passe doit contenir au moins 8 caractères.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (adminNewPassword && !doPasswordsMatch) {
       toast({
         title: 'Erreur',
         description: 'Les mots de passe ne correspondent pas.',
@@ -775,8 +797,8 @@ export const AdminDashboard = () => {
 
       setAdminEmail('');
       setAdminPassword('');
-      setAdminNewPassword('');
-      setConfirmPassword('');
+      setNewPassword('');
+      setNewConfirmPassword('');
       setShowAccountModal(false);
     } catch (error) {
       toast({
@@ -1245,26 +1267,37 @@ export const AdminDashboard = () => {
                 <Input
                   id="adminNewPassword"
                   type="password"
-                  value={adminNewPassword}
-                  onChange={(e) => setAdminNewPassword(e.target.value)}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
+                  className={getInputClassName(passwordFeedback.isValid)}
                 />
+                {newPassword && (
+                  <p className={`text-sm mt-1 ${passwordFeedback.isValid ? 'text-green-600' : 'text-red-500'}`}>
+                    {passwordFeedback.message}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="confirmPassword" className="text-[#4B0082]">Confirmer le nouveau mot de passe</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  value={confirmNewPassword}
+                  onChange={(e) => setNewConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="border-[#4B0082]/20 focus:border-[#4B0082] focus:ring-[#4B0082] transition-colors duration-200"
+                  className={getInputClassName(confirmPasswordFeedback.isValid)}
                 />
+                {confirmNewPassword && (
+                  <p className={`text-sm mt-1 ${confirmPasswordFeedback.isValid ? 'text-green-600' : 'text-red-500'}`}>
+                    {confirmPasswordFeedback.message}
+                  </p>
+                )}
               </div>
               <Button 
                 onClick={updateAdminCredentials}
                 className="bg-[#4B0082] hover:bg-[#4B0082]/90 shadow-md hover:shadow-lg transition-all duration-200 w-full text-white"
+                disabled={!isFormValid}
               >
                 Mettre à jour mes informations
               </Button>
